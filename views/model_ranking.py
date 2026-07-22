@@ -1,0 +1,112 @@
+import pandas as pd
+import streamlit as st
+from db import get_engine
+
+engine = get_engine()
+
+logo_url_map = {
+    "현대": "https://cdn.simpleicons.org/hyundai",
+    "기아": "https://cdn.simpleicons.org/kia",
+    "제네시스": "https://autoimg.danawa.com/photo/brand/304_90.png",
+    "르노코리아": "https://cdn.simpleicons.org/renault",
+    "BMW": "https://cdn.simpleicons.org/bmw",
+    "Mercedes-Benz": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
+    "Tesla": "https://cdn.simpleicons.org/tesla",
+    "Audi": "https://cdn.simpleicons.org/audi",
+    "Volvo": "https://cdn.simpleicons.org/volvo",
+    "Lexus": "https://autoimg.danawa.com/photo/brand/486_90.png",
+    "Mini": "https://cdn.simpleicons.org/mini",
+    "Porsche": "https://cdn.simpleicons.org/porsche",
+    "Volkswagen": "https://cdn.simpleicons.org/volkswagen",
+    "Land Rover": "https://autoimg.danawa.com/photo/brand/399_90.png"
+}
+
+@st.cache_data
+def load_model_ranking_data():
+    try:
+        return pd.read_sql("SELECT * FROM model_ranking_table", con=engine)
+    except Exception:
+        return pd.DataFrame(columns=["기준연월", "제조사구분", "브랜드", "차량이름", "연료", "등록대수", "전월대비증가"])
+
+def render():
+    st.markdown(
+        """
+        <div style="padding: 1.2rem 1.3rem; border-radius: 18px; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 55%, #f8fafc 100%); border: 1px solid #dbeafe; margin-bottom: 1rem;">
+            <h1 style="margin-bottom:0.2rem;">모델별 랭킹 순위</h1>
+            <div style="font-size: 0.95rem; color: #475569;">기준 연월과 수입/국산 선택 후 브랜드를 지정하여 차종별 상세 등록 순위를 조회합니다.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    
+    model_ranking_df = load_model_ranking_data()
+
+    if model_ranking_df.empty:
+        st.warning("연동된 데이터베이스에 모델별 랭킹 데이터가 존재하지 않습니다.")
+        return
+
+    c1, c2 = st.columns(2)
+    with c1:
+        available_months = sorted(model_ranking_df["기준연월"].unique(), reverse=True)
+        selected_month = st.selectbox("기준 연월 선택", available_months, key="model_month")
+    with c2:
+        maker_type = st.selectbox("제조사 구분 선택", ["국산차", "수입차"], key="model_maker_type")
+    
+    sub_df = model_ranking_df[
+        (model_ranking_df["기준연월"] == selected_month) & 
+        (model_ranking_df["제조사구분"] == maker_type)
+    ]
+    raw_brands = sorted(sub_df["브랜드"].unique()) if not sub_df.empty else []
+
+    st.markdown("#### 🔍 브랜드 선택")
+    
+    if raw_brands:
+        if "selected_brand" not in st.session_state or st.session_state["selected_brand"] not in raw_brands:
+            st.session_state["selected_brand"] = raw_brands[0]
+
+        cols = st.columns(len(raw_brands))
+        for idx, brand in enumerate(raw_brands):
+            with cols[idx]:
+                is_selected = (st.session_state["selected_brand"] == brand)
+                if st.button(f"{'✅ ' if is_selected else ''}{brand}", key=f"btn_{brand}", use_container_width=True):
+                    st.session_state["selected_brand"] = brand
+                    st.rerun()
+                    
+        selected_brand = st.session_state["selected_brand"]
+    else:
+        selected_brand = None
+        st.warning("선택 가능한 브랜드가 없습니다.")
+
+    filtered = sub_df[sub_df["브랜드"] == selected_brand].copy() if selected_brand else pd.DataFrame()
+
+    if not filtered.empty:
+        filtered = filtered.sort_values(by="등록대수", ascending=False).reset_index(drop=True)
+        filtered.index = filtered.index + 1
+        filtered.insert(0, "순위", filtered.index)
+        filtered["브랜드 로고"] = filtered["브랜드"].map(logo_url_map)
+
+    st.markdown(f"### 🚗 [{selected_month}] [{selected_brand if selected_brand else '선택 없음'}] 모델별 등록 랭킹")
+
+    if not filtered.empty:
+        display_df = filtered[["순위", "브랜드 로고", "브랜드", "차량이름", "연료", "등록대수", "전월대비증가"]].rename(
+            columns={"전월대비증가": "전월대비 증가량"}
+        )
+        st.dataframe(
+            display_df,
+            column_config={
+                "브랜드 로고": st.column_config.ImageColumn("브랜드 로고", width="small")
+            },
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        download_df = display_df.drop(columns=["브랜드 로고"])
+        st.download_button(
+            "모델별 랭킹 데이터 다운로드 (CSV)",
+            download_df.to_csv(index=False).encode("utf-8-sig"),
+            f"모델_랭킹_{selected_brand}_{selected_month}.csv",
+            "text/csv",
+            use_container_width=True,
+        )
+    else:
+        st.warning("선택하신 조건에 해당하는 모델 데이터가 없습니다.")

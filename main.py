@@ -242,7 +242,6 @@ def registration_status_view():
     if registration_df.empty:
         st.warning("연동된 데이터베이스에 등록 현황 데이터가 존재하지 않습니다.")
         return
-    # ...나머지 뷰 로직 생략 없이 동일하게 작동...
 
 def brand_ranking_view():
     section_title("브랜드별 랭킹 순위", "수입/국산 및 연도(월) 조건을 선택하여 브랜드 등록 순위를 확인합니다.")
@@ -269,11 +268,45 @@ def ev_price_and_spec_view():
         return
 
 def faq_view():
-    section_title("자주 하는 질문 (FAQ)", "키워드와 카테고리로 업무 문의를 빠르게 찾습니다.")
+    section_title("자주 하는 질문 (FAQ)", "카테고리를 먼저 선택한 후 관련 내용을 확인하세요.")
+
     if faq_df.empty:
         st.warning("연동된 데이터베이스에 FAQ 데이터가 존재하지 않습니다.")
         return
-    for _, faq in faq_df.iterrows():
+
+    # 1. 카테고리 선택 UI (전체 / 차량 등록 / 전기차) - 라디오 버튼 활용
+    selected_category = st.radio(
+        "관심 있는 주제를 선택하세요:",
+        options=["전체", "차량 등록", "전기차"],
+        horizontal=True
+    )
+
+    st.markdown("---")
+
+    # 2. 검색어 입력창 배치
+    keyword = st.text_input("검색어 입력", placeholder="예: 신차, 보조금, 명의 변경")
+
+    # 3. 카테고리 및 검색어 필터링 로직 적용
+    result_faq = faq_df.copy()
+
+    if selected_category != "전체":
+        result_faq = result_faq[result_faq["카테고리"] == selected_category]
+
+    if keyword:
+        matched = (
+            result_faq["질문"].str.contains(keyword, case=False, na=False) | 
+            result_faq["답변"].str.contains(keyword, case=False, na=False)
+        )
+        result_faq = result_faq[matched]
+
+    # 4. 결과 출력
+    st.caption(f"총 {len(result_faq)}건의 FAQ가 검색되었습니다.")
+
+    if result_faq.empty:
+        st.info("조건에 일치하는 FAQ가 없습니다.")
+        return
+
+    for _, faq in result_faq.iterrows():
         with st.expander(f"[{faq['카테고리']}] {faq['질문']}"):
             st.write(faq["답변"])
 

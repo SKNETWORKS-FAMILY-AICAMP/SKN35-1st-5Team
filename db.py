@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
-
 import certifi
 from dotenv import load_dotenv
 from sqlalchemy import URL, create_engine, text
+import pandas as pd
 
 # 환경 변수 로드 (.env 파일에 DB 접속 정보 설정)
 load_dotenv(Path(__file__).with_name(".env"))
@@ -151,6 +151,46 @@ def init_database_tables():
         for statement in create_tables_sql.strip().split(";"):
             if statement.strip():
                 conn.execute(text(statement))
+
+    insert_initial_faqs(engine)
+
+def insert_initial_faqs(engine):
+    """FAQ 샘플 데이터를 데이터베이스에 적재합니다."""
+    faq_data = [
+        {
+            "카테고리": "차량 등록",
+            "질문": "신차를 구입한 후 등록까지 며칠 이내에 해야 하나요?",
+            "답변": "신차 신규 등록은 임시운행허가기간 내(통상 10일 이내)에 하셔야 과태료를 면할 수 있습니다."
+        },
+        {
+            "카테고리": "차량 등록",
+            "질문": "차량 명의를 변경할 때 필요한 서류가 무엇인가요?",
+            "답변": "이전등록신청서, 양도증명서, 양도인 인감증명서(또는 본인서명사실확인서), 양수인 의무보험가입증명서 등이 필요합니다."
+        },
+        {
+            "카테고리": "전기차",
+            "질문": "전기차 구매 보조금은 어떻게 신청하나요?",
+            "답변": "지자체별 보조금 신청 기간에 맞춰 차량 계약 후 제조·판매사와 함께 무공해차 통합누리집을 통해 대행 신청하게 됩니다."
+        },
+        {
+            "카테고리": "전기차",
+            "질문": "공영주차장 이용 시 전기차 할인 혜택이 있나요?",
+            "답변": "네, 지자체에 따라 공영주차장 요금 50~80% 감면 및 하이패스 통행료 할인 등의 혜택을 받을 수 있습니다."
+        }
+    ]
+
+    df = pd.DataFrame(faq_data)
+    
+    # 이미 FAQ 데이터가 들어있는지 확인 후, 비어있을 때만 넣거나 append 실행
+    try:
+        existing_df = pd.read_sql("SELECT COUNT(*) as cnt FROM faq_table", con=engine)
+        if existing_df['cnt'][0] == 0:
+            df.to_sql(name="faq_table", con=engine, if_exists="append", index=False)
+            print("FAQ 샘플 데이터가 성공적으로 적재되었습니다!")
+        else:
+            print("FAQ 테이블에 이미 데이터가 존재하여 생략합니다.")
+    except Exception as e:
+        print(f"FAQ 데이터 적재 중 확인 과정에서 예외 발생: {e}")
 
 if __name__ == "__main__":
     init_database_tables()

@@ -613,6 +613,7 @@ elif selected_menu == "📊 데이터 · ERD 안내":
     data_erd_view()
 elif selected_menu == "❓ FAQ":
     faq_view()
+    st.divider()
 elif selected_menu == "🔌 전기차 충전소 정보":
     ev_station_map_view()
 elif selected_menu == "💰 전기차 가격 및 제원 비교":

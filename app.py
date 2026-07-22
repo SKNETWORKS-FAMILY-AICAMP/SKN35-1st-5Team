@@ -2,6 +2,7 @@
 import pandas as pd
 import streamlit as st
 import pydeck as pdk
+from streamlit_option_menu import option_menu
 
 st.set_page_config(
     page_title="자동차 등록 및 전기차 정보 통합 시스템",
@@ -22,33 +23,6 @@ st.markdown(
         }
         [data-testid="stSidebar"] * {
             color: white !important;
-        }
-
-        /* 라디오 버튼 간격 및 카드 스타일 */
-        div.row-widget.stRadio div[role="radiogroup"] {
-            gap: 8px;
-        }
-        div.row-widget.stRadio label {
-            background-color: rgba(255, 255, 255, 0.05);
-            padding: 12px 16px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            width: 100%;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-        }
-        div.row-widget.stRadio label:hover {
-            background-color: rgba(59, 130, 246, 0.25);
-            border-color: rgba(59, 130, 246, 0.5);
-        }
-
-        div[data-testid="stRadio"] input[type="radio"],
-        div[data-testid="stRadio"] div[data-baseweb="radio"] > div:first-child,
-        div[data-testid="stRadio"] svg {
-            display: none !important;
-        }
-        div[data-testid="stRadio"] div[data-baseweb="radio"] {
-            padding-left: 0px !important;
         }
 
         .hero {
@@ -121,7 +95,6 @@ registration_df = pd.DataFrame([
     {"기준연월": "2026-01", "제조사구분": "국산차", "제조사": "기아", "시도": "경기", "차종": "승용", "연료": "하이브리드", "등록대수": 4150000},
 ])
 
-# 브랜드별 랭킹용 데이터
 brand_ranking_df = pd.DataFrame([
     {"기준연월": "2026-02", "제조사구분": "국산차", "브랜드": "현대", "등록대수": 115000, "전월대비증가": 4500},
     {"기준연월": "2026-02", "제조사구분": "국산차", "브랜드": "기아", "등록대수": 108000, "전월대비증가": 3200},
@@ -174,7 +147,6 @@ faq_df = pd.DataFrame([
     {"카테고리": "법인 차량", "질문": "법인 차량도 지역별 조회가 가능한가요?", "답변": "향후 법인 및 개인 구분 필터를 제공할 예정입니다."},
 ])
 
-# 전기차 충전소 상세 가상 데이터
 ev_stations_df = pd.DataFrame([
     {"충전소명": "서울역 공영주차장 충전소", "지역": "서울", "lat": 37.5559, "lon": 126.9723, "급속충전기수": 5, "완속충전기수": 10, "운영상태": "정상운영"},
     {"충전소명": "강남구청 급속충전소", "지역": "서울", "lat": 37.5173, "lon": 127.0473, "급속충전기수": 8, "완속충전기수": 4, "운영상태": "정상운영"},
@@ -184,7 +156,6 @@ ev_stations_df = pd.DataFrame([
     {"충전소명": "제주공항 전기차 충전 스테이션", "지역": "제주", "lat": 33.5066, "lon": 126.4930, "급속충전기수": 15, "완속충전기수": 30, "운영상태": "정상운영"},
 ])
 
-# 전기차 가격, 보조금 및 상세 제원 데이터
 ev_price_df = pd.DataFrame([
     {"브랜드": "현대", "모델명": "아이오닉 5", "차량가격(원)": 52000000, "정부보조금(원)": 6500000, "배터리용량(kWh)": 77.4, "주행거리(km)": 458, "전비(km/kWh)": 5.1},
     {"브랜드": "현대", "모델명": "아이오닉 6", "차량가격(원)": 54000000, "정부보조금(원)": 6800000, "배터리용량(kWh)": 77.4, "주행거리(km)": 524, "전비(km/kWh)": 6.0},
@@ -198,44 +169,55 @@ ev_price_df = pd.DataFrame([
 ev_price_df["최종실구매가(원)"] = ev_price_df["차량가격(원)"] - ev_price_df["정부보조금(원)"]
 
 
-# --- 사이드바 UI 구조 구성 (하단 불필요한 라디오 완전히 제거) ---
-st.sidebar.markdown("## 🚗 Auto Insight")
-st.sidebar.caption("자동차 통합 정보 시스템")
-st.sidebar.divider()
+# --- 사이드바 통합 메뉴 구성 (배경색 통일 및 아이콘/글자 가독성 개선) ---
+with st.sidebar:
+    st.markdown("## 🚗 Auto Insight")
+    st.caption("자동차 통합 정보 시스템")
+    st.divider()
 
-menu_options = [
-    "📊 Home",
-    "🚙 자동차 등록 현황",
-    "🏆 브랜드별 랭킹",
-    "🚗 모델별 랭킹",
-    "📊 데이터 · ERD 안내",
-    "❓ FAQ",
-    "🔌 전기차 충전소 정보",
-    "💰 전기차 가격 및 제원 비교",
-]
+    active_tab = option_menu(
+        menu_title=None,
+        options=[
+            "Home",
+            "자동차 등록 현황",
+            "브랜드별 랭킹",
+            "모델별 랭킹",
+            "데이터 · ERD 안내",
+            "FAQ",
+            "전기차 충전소 정보",
+            "전기차 가격 및 제원 비교",
+        ],
+        icons=[
+            "house", 
+            "clipboard-data", 
+            "trophy", 
+            "car-front", 
+            "database", 
+            "question-circle",
+            "ev-station", 
+            "cash-coin"
+        ],
+        default_index=0,
+        styles={
+            "container": {"padding": "0!important", "background-color": "#0f172a"},
+            "icon": {"color": "#e2e8f0", "font-size": "15px"},
+            "nav-link": {
+                "font-size": "14px",
+                "color": "#f1f5f9",
+                "text-align": "left",
+                "margin": "0px",
+                "background-color": "transparent",
+                "--hover-color": "rgba(59, 130, 246, 0.3)",
+            },
+            "nav-link-selected": {
+                "background-color": "#3b82f6",
+                "color": "#ffffff",
+            },
+        }
+    )
 
-# 카테고리별 구분을 주기 위한 포맷터 (선택 사항)
-def format_func(option):
-    if option in ["🔌 전기차 충전소 정보", "💰 전기차 가격 및 제원 비교"]:
-        return f"⚡ {option}"
-    return f"📁 {option}"
-
-selected_menu = st.sidebar.radio(
-    "메뉴 선택",
-    options=menu_options,
-    label_visibility="collapsed",
-    key="main_menu_radio",
-)
-
-
-st.sidebar.divider()
-st.sidebar.caption("SKN35_1st_Project_Group5")
-
-
-# 어느 메뉴가 선택되었는지 판단하여 화면 출력 분기
-# current_page = sub_menu_1 if "sub_menu_1_radio" in st.session_state else "📊 Home"
-# 사용자가 최근에 클릭한 메뉴 판별을 위한 로직 처리
-# 사이드바 라디오 값이 각각 변경될 수 있으므로 전역적으로 세션 상태 관리 적용 가능하도록 함
+    st.divider()
+    st.caption("SKN35_1st_Project_Group5")
 
 
 def section_title(title, caption):
@@ -277,21 +259,20 @@ def home_view():
     st.divider()
     tab1, tab2 = st.tabs(["📊 지역별 등록 요약", "📈 월별 데이터 추이"])
 
-
     with tab1:
-            left, right = st.columns([1.2, 1])
-            with left:
-                st.markdown("### 시도별 총 등록대수 차트")
-                chart_df = registration_df.groupby("시도", as_index=False)["등록대수"].sum().sort_values("등록대수", ascending=False)
-                st.bar_chart(chart_df.set_index("시도"), width='stretch')
-            with right:
-                st.markdown("### 📋 지역별 등록 현황 요약 표")
-                st.dataframe(chart_df, width='stretch', hide_index=True)
+        left, right = st.columns([1.2, 1])
+        with left:
+            st.markdown("### 시도별 총 등록대수 차트")
+            chart_df = registration_df.groupby("시도", as_index=False)["등록대수"].sum().sort_values("등록대수", ascending=False)
+            st.bar_chart(chart_df.set_index("시도"), use_container_width=True)
+        with right:
+            st.markdown("### 📋 지역별 등록 현황 요약 표")
+            st.dataframe(chart_df, use_container_width=True, hide_index=True)
 
     with tab2:
         st.markdown("### 월별 총 등록 추이")
         month_df = registration_df.groupby("기준연월", as_index=False)["등록대수"].sum().sort_values("기준연월")
-        st.line_chart(month_df.set_index("기준연월"), width='stretch')
+        st.line_chart(month_df.set_index("기준연월"), use_container_width=True)
 
     st.info("현재 화면은 실시간 통계 시스템의 샘플 대시보드입니다.")
 
@@ -325,11 +306,9 @@ def registration_status_view():
     st.dataframe(
         display_reg,
         column_config={
-            "브랜드 로고": st.column_config.ImageColumn(
-                "브랜드 로고", width="small"
-            )
+            "브랜드 로고": st.column_config.ImageColumn("브랜드 로고", width="small")
         },
-        width='stretch',
+        use_container_width=True,
         hide_index=True,
     )
 
@@ -340,13 +319,11 @@ def registration_status_view():
             download_df.to_csv(index=False).encode("utf-8-sig"),
             "자동차_등록_현황.csv",
             "text/csv",
-            width='stretch',
+            use_container_width=True,
         )
 
-
-
 def brand_ranking_view():
-    section_title("브랜드별 랭킹 순위", "수입(Top 10)/국산(4개) 및 연도(월) 조건을 선택하여 브랜드 등록 순위를 확인합니다.")
+    section_title("브랜드별 랭킹 순위", "수입/국산 및 연도(월) 조건을 선택하여 브랜드 등록 순위를 확인합니다.")
 
     c1, c2 = st.columns(2)
     with c1:
@@ -376,11 +353,9 @@ def brand_ranking_view():
     st.dataframe(
         display_df,
         column_config={
-            "브랜드 로고": st.column_config.ImageColumn(
-                "브랜드 로고", width="small"
-            )
+            "브랜드 로고": st.column_config.ImageColumn("브랜드 로고", width="small")
         },
-        width='stretch',
+        use_container_width=True,
         hide_index=True,
     )
 
@@ -390,7 +365,7 @@ def brand_ranking_view():
         download_df.to_csv(index=False).encode("utf-8-sig"),
         f"브랜드_랭킹_{selected_month}.csv",
         "text/csv",
-        width='stretch',
+        use_container_width=True,
     )
 
 def model_ranking_view():
@@ -409,31 +384,17 @@ def model_ranking_view():
     ]
     raw_brands = sorted(sub_df["브랜드"].unique()) if not sub_df.empty else []
 
-    st.markdown("#### 🔍 브랜드 선택 (로고 클릭)")
+    st.markdown("#### 🔍 브랜드 선택")
 
     if raw_brands:
-        # 세션 상태 초기화
         if "selected_brand" not in st.session_state or st.session_state["selected_brand"] not in raw_brands:
             st.session_state["selected_brand"] = raw_brands[0]
 
-        # 브랜드를 가로로 배치하여 로고 이미지와 이름을 보여주는 선택 카드 버튼 구현
         cols = st.columns(len(raw_brands))
         for idx, brand in enumerate(raw_brands):
-            logo_url = logo_url_map.get(brand, "")
             with cols[idx]:
                 is_selected = (st.session_state["selected_brand"] == brand)
-                border_color = "#3b82f6" if is_selected else "#e5e7eb"
-                bg_color = "#eff6ff" if is_selected else "#ffffff"
-
-                # 브랜드 선택 카드 HTML 구성
-                card_html = f"""
-
-
-                    {brand}
-
-                """
-                st.markdown(card_html, unsafe_allow_html=True)
-                if st.button("선택", key=f"btn_{brand}", use_container_width=True):
+                if st.button(f"{'✅ ' if is_selected else ''}{brand}", key=f"btn_{brand}", use_container_width=True):
                     st.session_state["selected_brand"] = brand
                     st.rerun()
 
@@ -459,11 +420,9 @@ def model_ranking_view():
         st.dataframe(
             display_df,
             column_config={
-                "브랜드 로고": st.column_config.ImageColumn(
-                    "브랜드 로고", width="small"
-                )
+                "브랜드 로고": st.column_config.ImageColumn("브랜드 로고", width="small")
             },
-            width='stretch',
+            use_container_width=True,
             hide_index=True,
         )
 
@@ -473,7 +432,7 @@ def model_ranking_view():
             download_df.to_csv(index=False).encode("utf-8-sig"),
             f"모델_랭킹_{selected_brand}_{selected_month}.csv",
             "text/csv",
-            width='stretch',
+            use_container_width=True,
         )
     else:
         st.warning("선택하신 조건에 해당하는 모델 데이터가 없습니다.")
@@ -483,26 +442,19 @@ def data_erd_view():
     st.info("데이터베이스 구조 및 ERD 정보 화면입니다.")
 
 def faq_view():
-    section_title(
-        "자주 하는 질문 (FAQ)",
-        "키워드와 카테고리로 업무 문의를 빠르게 찾습니다.",
-    )
+    section_title("자주 하는 질문 (FAQ)", "키워드와 카테고리로 업무 문의를 빠르게 찾습니다.")
 
     c1, c2 = st.columns([2, 1])
     with c1:
         keyword = st.text_input("검색어", placeholder="예: 법인, 등록, 기준일")
     with c2:
-        category = st.selectbox(
-            "카테고리", ["전체"] + sorted(faq_df["카테고리"].unique().tolist())
-        )
+        category = st.selectbox("카테고리", ["전체"] + sorted(faq_df["카테고리"].unique().tolist()))
 
     result_faq = faq_df.copy()
     if category != "전체":
         result_faq = result_faq[result_faq["카테고리"] == category]
     if keyword:
-        matched = result_faq["질문"].str.contains(
-            keyword, case=False, na=False
-        ) | result_faq["답변"].str.contains(keyword, case=False, na=False)
+        matched = result_faq["질문"].str.contains(keyword, case=False, na=False) | result_faq["답변"].str.contains(keyword, case=False, na=False)
         result_faq = result_faq[matched]
 
     st.caption(f"{len(result_faq)}건의 FAQ 검색됨")
@@ -510,7 +462,6 @@ def faq_view():
         with st.expander(f"[{faq['카테고리']}] {faq['질문']}"):
             st.write(faq["답변"])
 
-# 전기차 충전소 지도 및 상태 조회 기능
 def ev_station_map_view():
     section_title("전기차 충전소 정보 및 상태 조회", "지역별 전기차 충전소 위치, 충전기 대수 및 실시간 운영 상태를 확인합니다.")
 
@@ -552,9 +503,8 @@ def ev_station_map_view():
     st.pydeck_chart(r)
 
     st.markdown("### 📋 충전소 상세 운영 목록")
-    st.dataframe(filtered_stations[["지역", "충전소명", "급속충전기수", "완속충전기수", "운영상태"]], width='stretch', hide_index=True)
+    st.dataframe(filtered_stations[["지역", "충전소명", "급속충전기수", "완속충전기수", "운영상태"]], use_container_width=True, hide_index=True)
 
-# 전기차 가격, 보조금 및 제원 비교 기능
 def ev_price_and_spec_view():
     section_title("전기차 가격 및 제원 비교", "전기차 모델별 가격, 정부 보조금, 실구매가뿐만 아니라 배터리 용량 및 1회 충전 주행거리 제원을 비교합니다.")
 
@@ -593,28 +543,27 @@ def ev_price_and_spec_view():
         column_config={
             "브랜드 로고": st.column_config.ImageColumn("브랜드 로고", width="small")
         },
-        width='stretch',
+        use_container_width=True,
         hide_index=True,
     )
 
     st.info("💡 보조금 및 실구매가는 지자체 예산 소진 상황에 따라 변동될 수 있습니다.")
 
 
-# --- 🎯 메뉴 실행 라우팅 부분 ---
-if selected_menu == "📊 Home":
+# --- 메뉴 라우팅 연결 ---
+if active_tab == "Home":
     home_view()
-elif selected_menu == "🚙 자동차 등록 현황":
+elif active_tab == "자동차 등록 현황":
     registration_status_view()
-elif selected_menu == "🏆 브랜드별 랭킹":
+elif active_tab == "브랜드별 랭킹":
     brand_ranking_view()
-elif selected_menu == "🚗 모델별 랭킹":
+elif active_tab == "모델별 랭킹":
     model_ranking_view()
-elif selected_menu == "📊 데이터 · ERD 안내":
+elif active_tab == "데이터 · ERD 안내":
     data_erd_view()
-elif selected_menu == "❓ FAQ":
+elif active_tab == "FAQ":
     faq_view()
-    st.divider()
-elif selected_menu == "🔌 전기차 충전소 정보":
+elif active_tab == "전기차 충전소 정보":
     ev_station_map_view()
-elif selected_menu == "💰 전기차 가격 및 제원 비교":
+elif active_tab == "전기차 가격 및 제원 비교":
     ev_price_and_spec_view()

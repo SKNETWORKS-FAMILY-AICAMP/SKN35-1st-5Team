@@ -145,6 +145,8 @@ def init_database_tables():
         질문 TEXT,
         답변 TEXT
     );
+
+    -- 7. QnA 테이블
     """
 
     with engine.begin() as conn:

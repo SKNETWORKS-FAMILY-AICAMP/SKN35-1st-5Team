@@ -1,7 +1,14 @@
 
+import os
+from pathlib import Path
 import pandas as pd
 import streamlit as st
+import plotly.express as px
 from streamlit_option_menu import option_menu
+from sqlalchemy import text
+
+# db.py에서 SQLAlchemy 엔진 가져오기
+from db import get_engine
 
 # Page Config Configuration
 st.set_page_config(
@@ -11,6 +18,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ---------------------------------------------------------
+# 매핑 딕셔너리
+# ---------------------------------------------------------
+
 # 브랜드 로고 URL 매핑 딕셔너리
 LOGO_URL_MAP = {
     "현대": "https://cdn.simpleicons.org/hyundai",
@@ -18,18 +29,60 @@ LOGO_URL_MAP = {
     "제네시스": "https://autoimg.danawa.com/photo/brand/304_90.png",
     "르노코리아": "https://cdn.simpleicons.org/renault",
     "BMW": "https://cdn.simpleicons.org/bmw",
-    "Mercedes-Benz": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
-    "Tesla": "https://cdn.simpleicons.org/tesla",
-    "Audi": "https://cdn.simpleicons.org/audi",
-    "Volvo": "https://cdn.simpleicons.org/volvo",
-    "Lexus": "https://autoimg.danawa.com/photo/brand/486_90.png",
-    "Mini": "https://cdn.simpleicons.org/mini",
+    "벤츠": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
+    "테슬라": "https://cdn.simpleicons.org/tesla",
+    "아우디": "https://cdn.simpleicons.org/audi",
+    "볼보": "https://cdn.simpleicons.org/volvo",
+    "렉서스": "https://autoimg.danawa.com/photo/brand/486_90.png",
+    "미니": "https://cdn.simpleicons.org/mini",
+    "토요타" : "https://file.carisyou.com/upload/2017/02/16/FILE_201702160632058010.png",
+    "비야디" : "https://file.carisyou.com/upload/2025/01/16/FILE_202501160159046160.png",
     "Porsche": "https://cdn.simpleicons.org/porsche",
     "Volkswagen": "https://cdn.simpleicons.org/volkswagen",
-    "Land Rover": "https://autoimg.danawa.com/photo/brand/399_90.png"
+    "Land Rover": "https://autoimg.danawa.com/photo/brand/399_90.png",
+}
+
+# 차량 이미지 URL 매핑 딕셔너리
+CAR_IMAGE_URL_MAP = {
+    "테슬라 모델 Y": "https://file.carisyou.com/upload/2025/03/28/thumb/FILE_202503280326303300.png",
+    "비야디 돌핀": "https://file.carisyou.com/upload/2026/02/05/thumb/FILE_202602050221397310.png",
+    "BMW 5시리즈": "https://file.carisyou.com/upload/2023/09/06/thumb/FILE_202309061102221390.png",
+    "벤츠 E클래스": "https://file.carisyou.com/upload/2024/01/04/thumb/FILE_202401040227284180.png",
+    "벤츠 GLC": "https://file.carisyou.com/upload/2026/07/09/thumb/FILE_202607090356077700.png",
+    "비야디 씨라이언 7": "https://file.carisyou.com/upload/2025/09/08/thumb/FILE_202509080508098370.png",
+    "테슬라 모델 X": "https://file.carisyou.com/upload/2025/06/18/thumb/FILE_202506180914009330.png",
+    "볼보 EX30": "https://file.carisyou.com/upload/2023/11/20/thumb/FILE_202311201005517060.png",
+    "토요타 RAV4": "https://file.carisyou.com/upload/2026/05/08/thumb/FILE_202605080932156420.png",
+    "벤츠 GLE": "https://file.carisyou.com/upload/2023/08/28/thumb/FILE_202308280216070440.png",
+    "테슬라 모델 3": "https://file.carisyou.com/upload/2024/04/03/thumb/FILE_202404030359257140.png",
+    "BMW X3": "https://file.carisyou.com/upload/2024/10/14/thumb/FILE_202410140313144470.png",
+    "아우디 A6": "https://file.carisyou.com/upload/2026/04/22/thumb/FILE_202604220319265610.png",
+    "렉서스 ES": "https://file.carisyou.com/upload/2024/01/18/thumb/FILE_202401180100060120.png",
+    "BMW X5": "https://file.carisyou.com/upload/2023/07/05/thumb/FILE_202307050208496140.png",
+    "폴스타 폴스타 4": "https://file.carisyou.com/upload/2024/08/13/thumb/FILE_202408130246035850.png",
+    "비야디 아토 3": "https://file.carisyou.com/upload/2025/01/16/thumb/FILE_202501160330016950.png",
+    "렉서스 NX": "https://file.carisyou.com/upload/2023/03/23/thumb/FILE_202303230243469280.png",
+    "볼보 XC60": "https://file.carisyou.com/upload/2025/07/31/thumb/FILE_202507310406214750.png",
+    "벤츠 S클래스": "https://file.carisyou.com/upload/2026/05/18/thumb/FILE_202605180506519330.png",
+    "미니 미니 쿠퍼": "https://file.carisyou.com/upload/2025/04/21/thumb/FILE_202504210353341500.png",
+    "현대 그랜저": "https://file.carisyou.com/upload/2026/05/14/thumb/FILE_202605140405014280.png",
+    "기아 쏘렌토": "https://file.carisyou.com/upload/2023/09/07/thumb/FILE_202309070441362840.png",
+    "기아 카니발": "https://file.carisyou.com/upload/2024/02/05/thumb/FILE_202402050415167530.png",
+    "기아 스포티지": "https://file.carisyou.com/upload/2024/11/08/thumb/FILE_202411081136590820.png",
+    "기아 셀토스": "https://file.carisyou.com/upload/2026/02/26/thumb/FILE_202602260119043900.png",
+    "현대 쏘나타": "https://file.carisyou.com/upload/2023/04/24/thumb/FILE_202304241052430090.png",
+    "기아 레이": "https://file.carisyou.com/upload/2023/08/29/thumb/FILE_202308291058138900.png",
+    "현대 아반떼": "https://file.carisyou.com/upload/2023/03/13/thumb/FILE_202303130931074190.png",
+    "현대 싼타페": "https://file.carisyou.com/upload/2023/08/14/thumb/FILE_202308141019512170.png",
+    "현대 팰리세이드": "https://file.carisyou.com/upload/2024/12/20/thumb/FILE_202412200435289480.png",
+    "현대 투싼": "https://file.carisyou.com/upload/2023/12/06/thumb/FILE_202312060215369920.png",
+    "기아 EV3": "https://file.carisyou.com/upload/2024/06/04/thumb/FILE_202406041058132380.png",
+    "현대 코나": "https://file.carisyou.com/upload/2023/01/18/thumb/FILE_202301181038184400.png",
+    "제네시스 G80": "https://autoimg.danawa.com/photo/brand/304_90.png",
 }
 
 DEFAULT_LOGO = "https://cdn.simpleicons.org/simpleicons"
+DEFAULT_CAR_IMAGE = ""
 
 # Custom Styling (CSS)
 st.markdown(
@@ -56,107 +109,121 @@ st.markdown(
             font-size: 0.95rem;
             color: #475569;
         }
-        .review-card {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 12px 16px;
-            margin-bottom: 12px;
-        }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# --- Mock 데이터 생성 함수 ---
-@st.cache_data
+# ---------------------------------------------------------
+# DB 데이터 로드 함수 (실제 DB 컬럼명 적용)
+# ---------------------------------------------------------
+
+@st.cache_data(ttl=3600)
 def load_registration_data():
-    data = [
-        {"regist_id": 1, "manufacturer_type": "국산", "manufacturer": "현대", "car_model_type": "승용", "fuel_type": "가솔린", "registration_count": 12500, "standard_ym": "2024-01"},
-        {"regist_id": 2, "manufacturer_type": "국산", "manufacturer": "기아", "car_model_type": "SUV", "fuel_type": "하이브리드", "registration_count": 14200, "standard_ym": "2024-01"},
-        {"regist_id": 3, "manufacturer_type": "수입", "manufacturer": "BMW", "car_model_type": "승용", "fuel_type": "가솔린", "registration_count": 6100, "standard_ym": "2024-01"},
-        {"regist_id": 4, "manufacturer_type": "수입", "manufacturer": "Mercedes-Benz", "car_model_type": "승용", "fuel_type": "디젤", "registration_count": 5300, "standard_ym": "2024-01"},
-        {"regist_id": 5, "manufacturer_type": "국산", "manufacturer": "현대", "car_model_type": "승용", "fuel_type": "전기", "registration_count": 3200, "standard_ym": "2024-02"},
-        {"regist_id": 6, "manufacturer_type": "국산", "manufacturer": "기아", "car_model_type": "SUV", "fuel_type": "하이브리드", "registration_count": 15800, "standard_ym": "2024-02"},
-        {"regist_id": 7, "manufacturer_type": "수입", "manufacturer": "Tesla", "car_model_type": "승용", "fuel_type": "전기", "registration_count": 4800, "standard_ym": "2024-02"},
-        {"regist_id": 8, "manufacturer_type": "국산", "manufacturer": "제네시스", "car_model_type": "승용", "fuel_type": "가솔린", "registration_count": 8900, "standard_ym": "2024-03"},
-        {"regist_id": 9, "manufacturer_type": "수입", "manufacturer": "BMW", "car_model_type": "SUV", "fuel_type": "가솔린", "registration_count": 6700, "standard_ym": "2024-03"},
-    ]
-    df = pd.DataFrame(data)
-    df["logo"] = df["manufacturer"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
+    """1. car_registration 테이블 데이터 로드"""
+    engine = get_engine()
+    query = """
+    SELECT regist_id, company_type, company_name, model_name, count_car_month, standard_month
+    FROM car_registration
+    ORDER BY standard_month DESC
+    """
+    df = pd.read_sql(query, con=engine)
+    if not df.empty:
+        df["registration_count"] = pd.to_numeric(df["count_car_month"], errors="coerce").fillna(0).astype(int)
+        df["manufacturer"] = df["company_name"]
+        df["car_model_type"] = df["model_name"]
+        df["standard_ym"] = df["standard_month"]
+        df["manufacturer_type"] = df["company_type"]
+        df["logo"] = df["manufacturer"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
+        df["car_image"] = df["car_model_type"].map(CAR_IMAGE_URL_MAP).fillna(DEFAULT_CAR_IMAGE)
     return df
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_brand_ranking_data():
-    data = [
-        {"brand_id": 10, "regist_id": 10, "manufacturer_type": "국산", "standard_ym": "2024-02", "brand_name": "기아", "registration_count": 44000, "mom_increase": 3.0},
-        {"brand_id": 11, "regist_id": 11, "manufacturer_type": "국산", "standard_ym": "2024-02", "brand_name": "현대", "registration_count": 40000, "mom_increase": 1.5},
-        {"brand_id": 12, "regist_id": 12, "manufacturer_type": "수입", "standard_ym": "2024-02", "brand_name": "BMW", "registration_count": 6100, "mom_increase": 2.2},
-        {"brand_id": 13, "regist_id": 13, "manufacturer_type": "수입", "standard_ym": "2024-02", "brand_name": "Mercedes-Benz", "registration_count": 5800, "mom_increase": -0.5},
-        {"brand_id": 1, "regist_id": 1, "manufacturer_type": "국산", "standard_ym": "2024-03", "brand_name": "기아", "registration_count": 48200, "mom_increase": 5.2},
-        {"brand_id": 2, "regist_id": 2, "manufacturer_type": "국산", "standard_ym": "2024-03", "brand_name": "현대", "registration_count": 41500, "mom_increase": 2.1},
-        {"brand_id": 3, "regist_id": 3, "manufacturer_type": "국산", "standard_ym": "2024-03", "brand_name": "제네시스", "registration_count": 12800, "mom_increase": -1.4},
-        {"brand_id": 4, "regist_id": 4, "manufacturer_type": "수입", "standard_ym": "2024-03", "brand_name": "BMW", "registration_count": 6700, "mom_increase": 9.8},
-        {"brand_id": 5, "regist_id": 5, "manufacturer_type": "수입", "standard_ym": "2024-03", "brand_name": "Mercedes-Benz", "registration_count": 5900, "mom_increase": 1.1},
-        {"brand_id": 6, "regist_id": 6, "manufacturer_type": "수입", "standard_ym": "2024-03", "brand_name": "Tesla", "registration_count": 4800, "mom_increase": 45.2},
-    ]
-    df = pd.DataFrame(data)
-    df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
+    """2. car_brand_rank 테이블 데이터 로드"""
+    engine = get_engine()
+    query = """
+    SELECT b.brand_id, 
+           b.regist_id, 
+           b.brand_name, 
+           b.brand_standard_month AS standard_ym, 
+           b.compare_car_month AS mom_increase,
+           r.count_car_month AS registration_count,
+           r.company_type AS manufacturer_type
+    FROM car_brand_rank b
+    LEFT JOIN car_registration r ON b.regist_id = r.regist_id
+    ORDER BY b.brand_standard_month DESC
+    """
+    df = pd.read_sql(query, con=engine)
+    if not df.empty:
+        df["registration_count"] = pd.to_numeric(df["registration_count"], errors="coerce").fillna(0).astype(int)
+        df["mom_increase"] = pd.to_numeric(df["mom_increase"], errors="coerce").fillna(0).astype(int)
+        df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
     return df
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_model_ranking_data():
-    data = [
-        {"model_id": 101, "regist_id": 10, "manufacturer_type": "국산", "standard_ym": "2024-02", "brand_name": "기아", "car_name": "쏘렌토", "fuel_type": "하이브리드", "registration_count": 8100, "mom_increase": 2.0},
-        {"model_id": 104, "regist_id": 11, "manufacturer_type": "국산", "standard_ym": "2024-02", "brand_name": "현대", "car_name": "그랜저", "fuel_type": "가솔린", "registration_count": 6800, "mom_increase": 1.1},
-        {"model_id": 101, "regist_id": 1, "manufacturer_type": "국산", "standard_ym": "2024-03", "brand_name": "기아", "car_name": "쏘렌토", "fuel_type": "하이브리드", "registration_count": 8900, "mom_increase": 4.5},
-        {"model_id": 102, "regist_id": 2, "manufacturer_type": "국산", "standard_ym": "2024-03", "brand_name": "현대", "car_name": "싼타페", "fuel_type": "하이브리드", "registration_count": 7800, "mom_increase": 3.1},
-        {"model_id": 103, "regist_id": 3, "manufacturer_type": "국산", "standard_ym": "2024-03", "brand_name": "기아", "car_name": "카니발", "fuel_type": "가솔린", "registration_count": 7200, "mom_increase": -0.8},
-        {"model_id": 104, "regist_id": 4, "manufacturer_type": "국산", "standard_ym": "2024-03", "brand_name": "현대", "car_name": "그랜저", "fuel_type": "가솔린", "registration_count": 6500, "mom_increase": -2.3},
-        {"model_id": 105, "regist_id": 5, "manufacturer_type": "수입", "standard_ym": "2024-03", "brand_name": "Tesla", "car_name": "Model Y", "fuel_type": "전기", "registration_count": 4200, "mom_increase": 38.5},
-        {"model_id": 106, "regist_id": 6, "manufacturer_type": "수입", "standard_ym": "2024-03", "brand_name": "BMW", "car_name": "5 시리즈", "fuel_type": "가솔린", "registration_count": 2100, "mom_increase": 12.4},
-    ]
-    df = pd.DataFrame(data)
-    df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
+    """3. car_model_ranking 테이블 데이터 로드 (테이블명: car_model_ranking)"""
+    engine = get_engine()
+    query = """
+    SELECT m.model_id, 
+           m.regist_id, 
+           m.brand_name, 
+           m.standard_month AS standard_ym, 
+           m.compare_car_month AS mom_increase,
+           r.model_name AS car_name,
+           r.count_car_month AS registration_count,
+           r.company_type AS manufacturer_type,
+           '휘발유/디젤/전기' AS fuel_type  -- 기본 표시용
+    FROM car_model_ranking m
+    LEFT JOIN car_registration r ON m.regist_id = r.regist_id
+    ORDER BY m.standard_month DESC
+    """
+    df = pd.read_sql(query, con=engine)
+    if not df.empty:
+        df["registration_count"] = pd.to_numeric(df["registration_count"], errors="coerce").fillna(0).astype(int)
+        df["mom_increase"] = pd.to_numeric(df["mom_increase"], errors="coerce").fillna(0).astype(int)
+        df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
+        df["car_image"] = df["car_name"].map(CAR_IMAGE_URL_MAP).fillna(DEFAULT_CAR_IMAGE)
     return df
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_review_data():
-    # 📌 총 10개의 상세 리뷰 데이터
-    data = [
-        {"review_id": 1, "model_id": 101, "regist_id": 1, "overall_rating": 4.8, "performance": "연비가 훌륭하고 주행 시 소음이 거의 없습니다.", "price": "옵션 추가 시 다소 비쌈", "issues": "인포테인먼트 시스템 잔오류", "brand_name": "기아"},
-        {"review_id": 2, "model_id": 101, "regist_id": 1, "overall_rating": 4.7, "performance": "하이브리드 모드 전환 시 이질감이 거의 없고 부드럽습니다.", "price": "적정 수준", "issues": "출고 대기 기간이 너무 깁니다.", "brand_name": "기아"},
-        {"review_id": 3, "model_id": 101, "regist_id": 1, "overall_rating": 4.9, "performance": "실내 공간이 패밀리카로 최고입니다. 2열 승차감이 우수합니다.", "price": "가성비 무난함", "issues": "순정 타이어 마모가 다소 빠릅니다.", "brand_name": "기아"},
-        {"review_id": 4, "model_id": 102, "regist_id": 2, "overall_rating": 4.5, "performance": "실내 공간이 매우 넓고 가속력이 우수합니다.", "price": "적정 가격대", "issues": "후면 디자인 호불호 및 풍절음", "brand_name": "현대"},
-        {"review_id": 5, "model_id": 102, "regist_id": 2, "overall_rating": 4.4, "performance": "고속 도로 안정성이 탁월하고 HDA2 기능이 편리합니다.", "price": "옵션가가 살짝 부담됨", "issues": "C필러 쪽 디자인 세차가 다소 불편함", "brand_name": "현대"},
-        {"review_id": 6, "model_id": 103, "regist_id": 3, "overall_rating": 4.6, "performance": "패밀리카로 최적, 승차감이 부드럽습니다.", "price": "가성비 좋음", "issues": "차체가 커서 주차 시 불편함", "brand_name": "기아"},
-        {"review_id": 7, "model_id": 104, "regist_id": 4, "overall_rating": 4.7, "performance": "승차감이 정숙하며 정체 구간 차선 유지 보조가 탁월합니다.", "price": "높은 편", "issues": "핸들 버튼 터치 감도 미흡", "brand_name": "현대"},
-        {"review_id": 8, "model_id": 104, "regist_id": 4, "overall_rating": 4.8, "performance": "프리미엄 세단다운 정숙성과 그립감이 인상적입니다.", "price": "대형 세단 치고는 합리적", "issues": "트렁크 깊이가 약간 아쉽습니다.", "brand_name": "현대"},
-        {"review_id": 9, "model_id": 105, "regist_id": 5, "overall_rating": 4.3, "performance": "초반 가속 응답성이 엄청나고 오토파일럿이 매우 유용합니다.", "price": "보조금 미적용 시 부담", "issues": "승차감이 다소 단단함, 단차 문제", "brand_name": "Tesla"},
-        {"review_id": 10, "model_id": 106, "regist_id": 6, "overall_rating": 4.7, "performance": "고속 안정성이 뛰어나고 핸들링 정밀도가 좋습니다.", "price": "프로모션 적용 시 양호", "issues": "뒷좌석 공간이 다소 협소", "brand_name": "BMW"},
-    ]
-    df = pd.DataFrame(data)
-    df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
+    """4. review 테이블 데이터 로드"""
+    engine = get_engine()
+    query = """
+    SELECT review_id, 
+           model_id, 
+           regist_id, 
+           total_review AS overall_rating, 
+           performance_review AS performance, 
+           price_review AS price, 
+           problem_review AS issues, 
+           brand_name_review AS brand_name
+    FROM review
+    """
+    df = pd.read_sql(query, con=engine)
+    if not df.empty:
+        df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
     return df
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_faq_data():
-    data = [
-        {"faq_id": 1, "question": "신차 구매 후 등록 기한은 어떻게 되나요?", "answer": "임시운행허가기간(통상 10일) 이내에 관할 구청 또는 차량등록사업소에 등록해야 합니다."},
-        {"faq_id": 2, "question": "자동차 명의 변경 시 준비 서류는 무엇인가요?", "answer": "양도인/양수인 신분증, 자동차양도증명서, 이전등록신청서, 자동차보험 가입증명서가 필요합니다."},
-        {"faq_id": 3, "question": "자동차 등록 세금(취득세) 계산 기준은 어떻게 되나요?", "answer": "승용차 기준으로 차량 공급가액의 7%가 취득세로 부과되며, 경차는 4% (감면혜택 적용) 입니다."},
-        {"faq_id": 4, "question": "전기차 구매 시 받는 혜택은 어떤 것들이 있나요?", "answer": "국고 및 지자체 보조금 지원, 취득세 감면(최대 140만원), 공영주차장 및 고속도로 통행료 50% 할인 혜택이 있습니다."},
-    ]
-    return pd.DataFrame(data)
+    """5. faq 테이블 데이터 로드"""
+    engine = get_engine()
+    query = "SELECT faq_id, question, answer FROM faq ORDER BY faq_id ASC"
+    return pd.read_sql(query, con=engine)
 
-# 데이터 로드
+# 데이터 로드 실행
 registration_df = load_registration_data()
 brand_ranking_df = load_brand_ranking_data()
 model_ranking_df = load_model_ranking_data()
 review_df = load_review_data()
 faq_df = load_faq_data()
 
-# --- 사이드바 메뉴 구성 ---
+# ---------------------------------------------------------
+# 사이드바 메뉴 구성
+# ---------------------------------------------------------
 with st.sidebar:
     st.markdown("## 🚗 Auto Insight")
     st.caption("자동차 등록 현황 통합 시스템")
@@ -211,13 +278,16 @@ def section_title(title, caption):
         unsafe_allow_html=True,
     )
 
-# --- 공통 연/월 및 국산/수입 선택 필터 컴포넌트 ---
+# --- 필터 컴포넌트 ---
 def render_filter(df, show_type_filter=False, key_prefix="filter"):
     if df.empty or "standard_ym" not in df.columns:
         return None, None
 
-    available_yms = sorted(df["standard_ym"].unique(), reverse=True)
-    years = sorted(list(set([ym.split("-")[0] for ym in available_yms])), reverse=True)
+    available_yms = sorted(df["standard_ym"].dropna().unique(), reverse=True)
+    years = sorted(list(set([ym.split("-")[0] for ym in available_yms if "-" in ym])), reverse=True)
+
+    if not years:
+        return None, None
 
     if show_type_filter:
         c1, c2, c3, _ = st.columns([2, 2, 2, 4])
@@ -240,52 +310,105 @@ def render_filter(df, show_type_filter=False, key_prefix="filter"):
 
     return selected_target_ym, selected_type
 
-# 📌 새 창(모달/Dialog) 팝업 함수 정의
-@st.dialog("📝 차량 상세 리뷰", width="large")
-def show_review_modal(car_name, model_id, logo_url):
-    c1, c2 = st.columns([8, 2])
-    with c1:
-        st.subheader(f"[{car_name}] 사용자 상세 리뷰")
-    with c2:
+# --- 📌 월별 등록 추이 + 이미지 출력 팝업 (Dialog) ---
+@st.dialog("📈 월별 등록 추이 분석", width="large")
+def show_trend_dialog(car_name, logo_url, car_image_url, full_df):
+    c_logo, c_title, c_img = st.columns([1, 4, 3])
+
+    with c_logo:
         if logo_url:
-            st.image(logo_url, width=60)
+            st.image(logo_url, width=45)
+
+    with c_title:
+        st.markdown(f"### **{car_name}**")
+        st.caption("월별 총 등록대수 변동 추이 그래프입니다.")
+
+    with c_img:
+        if car_image_url:
+            st.image(car_image_url, width=160)
 
     st.divider()
 
-    matched_reviews = review_df[review_df["model_id"] == model_id] if not review_df.empty else pd.DataFrame()
+    car_trend_df = full_df[full_df["car_name"] == car_name].sort_values("standard_ym").copy()
+
+    if car_trend_df.empty:
+        st.info("해당 차종의 등록 추이 데이터가 없습니다.")
+    else:
+        chart_data = car_trend_df.set_index("standard_ym")[["registration_count"]]
+        chart_data.columns = ["등록 대수"]
+
+        st.line_chart(chart_data, use_container_width=True)
+
+        latest_count = car_trend_df.iloc[-1]["registration_count"]
+        first_count = car_trend_df.iloc[0]["registration_count"]
+        diff = latest_count - first_count
+
+        m1, m2 = st.columns(2)
+        with m1:
+            st.metric("최근 월 등록 대수", f"{latest_count:,} 대")
+        with m2:
+            st.metric("기간 내 변동 폭", f"{diff:+,} 대")
+
+# --- 📌 모델별 랭킹용 리뷰 팝업 (Dialog) ---
+@st.dialog("📝 차량 상세 리뷰", width="large")
+def show_review_dialog(car_name, logo_url, car_image_url, matched_reviews):
+    c_logo, c_title, c_img = st.columns([1, 4, 3])
+
+    with c_logo:
+        if logo_url:
+            st.image(logo_url, width=45)
+
+    with c_title:
+        st.markdown(f"### **{car_name}**")
+        st.caption(f"등록된 실사용자 리뷰: **{len(matched_reviews)}개**")
+
+    with c_img:
+        if car_image_url:
+            st.image(car_image_url, width=160)
+
+    st.divider()
 
     if matched_reviews.empty:
-        st.info(f"등록된 '{car_name}'의 상세 리뷰가 없습니다.")
+        st.info(f"'{car_name}'에 대한 등록된 상세 리뷰가 없습니다.")
     else:
-        st.write(f"총 **{len(matched_reviews)}개**의 리뷰가 등록되어 있습니다.")
+        for idx, row in matched_reviews.reset_index(drop=True).iterrows():
+            st.markdown(f"**리뷰 #{idx + 1}**")
 
-        # 리뷰 리스트 출력
-        for idx, row in matched_reviews.reset_index().iterrows():
-            rating = row.get("overall_rating", "N/A")
             performance = row.get("performance", "-")
             price = row.get("price", "-")
             issues = row.get("issues", "-")
 
-            st.markdown(
-                f"""
-                <div class="review-card">
-                    <div style="font-weight: bold; font-size: 1.05rem; margin-bottom: 6px; color: #1e293b;">
-                        리뷰 #{idx + 1} &nbsp;|&nbsp; ⭐ 평점: <span style="color: #f59e0b;">{rating}</span> / 5.0
-                    </div>
-                    <div style="margin-bottom: 4px;">🚀 <b>주행/성능:</b> {performance}</div>
-                    <div style="margin-bottom: 4px;">💰 <b>가격/가성비:</b> {price}</div>
-                    <div>⚠️ <b>단점/아쉬운 점:</b> {issues}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.info(f"**🚀 주행/성능**\n\n{performance}")
+            with c2:
+                st.success(f"**💰 가격/가성비**\n\n{price}")
+            with c3:
+                st.warning(f"**⚠️ 단점/아쉬운 점**\n\n{issues}")
 
-# --- 화면 뷰 함수들 ---
+            if idx < len(matched_reviews) - 1:
+                st.markdown("<hr style='margin: 12px 0; border: 0.5px solid #e2e8f0;'>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# 화면 뷰 함수들
+# ---------------------------------------------------------
+
 def home_view():
-    section_title("전국 자동차 등록 현황 대시보드 (Home)", "주요 통계 요약 및 월별 등록 추이, 차량 리뷰 검색 기능을 제공합니다.")
+    section_title(
+        "전국 자동차 등록 현황 대시보드 (Home)",
+        "주요 통계 요약 및 월별 등록 추이, 차량 리뷰 검색 기능을 제공합니다.",
+    )
 
-    total_count = int(registration_df["registration_count"].sum()) if not registration_df.empty and "registration_count" in registration_df.columns else 0
-    manufacturer_count = registration_df['manufacturer'].nunique() if not registration_df.empty and "manufacturer" in registration_df.columns else 0
+    total_count = (
+        int(registration_df["registration_count"].sum())
+        if not registration_df.empty and "registration_count" in registration_df.columns
+        else 0
+    )
+    manufacturer_count = (
+        registration_df["manufacturer"].nunique()
+        if not registration_df.empty and "manufacturer" in registration_df.columns
+        else 0
+    )
 
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -297,7 +420,7 @@ def home_view():
 
     st.divider()
 
-    st.markdown("### 🏆 인기 제조사 로고")
+    st.markdown("### 🏆 주요 제조사 로고")
     cols = st.columns(len(LOGO_URL_MAP))
     for idx, (brand, url) in enumerate(LOGO_URL_MAP.items()):
         with cols[idx % len(cols)]:
@@ -310,144 +433,308 @@ def home_view():
     with left_col:
         st.markdown("### 📈 월별 총 등록 추이")
         if not registration_df.empty and "standard_ym" in registration_df.columns:
-            month_df = registration_df.groupby("standard_ym", as_index=False)["registration_count"].sum().sort_values("standard_ym")
+            month_df = (
+                registration_df.groupby("standard_ym", as_index=False)["registration_count"]
+                .sum()
+                .sort_values("standard_ym")
+            )
             st.line_chart(month_df.set_index("standard_ym"), use_container_width=True)
         else:
             st.info("데이터가 없습니다.")
 
     with right_col:
         st.markdown("### 🔍 차량 리뷰 및 평가 검색")
-        st.caption("리뷰 내용(성능, 문제점, 브랜드명 등)에 포함된 단어로 검색해 보세요.")
+        st.caption("리뷰 내용(성능, 문제점, 브랜드명 등)에 포함된 키워드를 입력해보세요.")
 
-        review_keyword = st.text_input("리뷰 검색어 입력", placeholder="예: 소음, 가속, 현대, 승차감", key="home_review_search")
+        review_keyword = st.text_input(
+            "리뷰 검색어 입력",
+            placeholder="예: 소음, 가속, 현대, 승차감",
+            key="home_review_search",
+        )
 
-        if review_df.empty:
-            st.info("연동된 리뷰 데이터가 없습니다.")
+        if not review_keyword.strip():
+            st.info("💡 검색어를 입력하시면 관련 차량 리뷰 목록이 표출됩니다.")
         else:
-            result_review = review_df.copy()
-            if review_keyword:
-                mask = False
-                for col in ["performance", "issues", "brand_name"]:
-                    if col in result_review.columns:
-                        mask = mask | result_review[col].astype(str).str.contains(review_keyword, case=False, na=False)
-                result_review = result_review[mask]
-
-            st.caption(f"총 {len(result_review)}건의 리뷰가 검색되었습니다.")
-
-            if result_review.empty:
-                st.warning("검색 결과와 일치하는 리뷰 내용이 없습니다.")
+            if review_df.empty:
+                st.info("연동된 리뷰 데이터가 없습니다.")
             else:
-                cols_order = ["logo"] + [col for col in result_review.columns if col != "logo"]
-                st.dataframe(
-                    result_review[cols_order], 
-                    use_container_width=True, 
-                    hide_index=True,
-                    column_config={
-                        "logo": st.column_config.ImageColumn("로고", width="small")
-                    }
-                )
+                mask = False
+                for col in ["performance", "issues", "brand_name", "price"]:
+                    if col in review_df.columns:
+                        mask = mask | review_df[col].astype(str).str.contains(review_keyword, case=False, na=False)
+
+                result_review = review_df[mask].copy()
+
+                if result_review.empty:
+                    st.warning(f"'{review_keyword}'에 대한 검색 결과가 없습니다.")
+                else:
+                    st.caption(f"총 **{len(result_review)}건**의 리뷰가 검색되었습니다.")
+
+                    display_cols = ["logo", "brand_name", "performance", "price", "issues"]
+
+                    event = st.dataframe(
+                        result_review[display_cols],
+                        use_container_width=True,
+                        hide_index=True,
+                        selection_mode="single-row",
+                        on_select="rerun",
+                        key="home_review_search_table",
+                        column_config={
+                            "logo": st.column_config.ImageColumn("로고", width="small"),
+                            "brand_name": "브랜드",
+                            "performance": "주행/성능",
+                            "price": "가격/가성비",
+                            "issues": "단점/아쉬운점",
+                        },
+                    )
+
+                    selected_rows = event.selection.get("rows", [])
+                    if selected_rows:
+                        selected_idx = selected_rows[0]
+                        selected_data = result_review.iloc[selected_idx]
+                        model_id = selected_data["model_id"]
+
+                        matched_model = model_ranking_df[model_ranking_df["model_id"] == model_id]
+
+                        if not matched_model.empty:
+                            car_name = matched_model.iloc[0]["car_name"]
+                            car_image_url = matched_model.iloc[0]["car_image"]
+                        else:
+                            car_name = f"{selected_data['brand_name']} 차량"
+                            car_image_url = DEFAULT_CAR_IMAGE
+
+                        logo_url = selected_data["logo"]
+                        matched_reviews = review_df[review_df["model_id"] == model_id]
+
+                        show_review_dialog(car_name, logo_url, car_image_url, matched_reviews)
+
+@st.dialog("📊 월별 등록 대수 추이 분석", width="large")
+def show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_url, car_history_df):
+    # 1. 팝업 헤더 영역 (로고, 차종명, 이미지)
+    c_logo, c_title, c_img = st.columns([1, 4, 3])
+
+    with c_logo:
+        if logo_url:
+            st.image(logo_url, width=45)
+
+    with c_title:
+        st.markdown(f"### **[{manufacturer}] {car_name}**")
+        st.caption("월별 신규 등록 대수 변화 추이")
+
+    with c_img:
+        if car_image_url:
+            st.image(car_image_url, width=150)
+
+    st.divider()
+
+    # 2. 데이터가 없는 경우 예외 처리
+    if car_history_df.empty:
+        st.info(f"'{car_name}' 모델에 대한 월별 등록 추이 데이터가 없습니다.")
+        return
+
+    # 3. 날짜순 정렬 (standard_ym 오름차순)
+    trend_df = car_history_df.sort_values(by="standard_ym", ascending=True).copy()
+
+    # 주요 요약 지표 (Metrics)
+    total_count = trend_df["registration_count"].sum()
+    avg_count = int(trend_df["registration_count"].mean())
+    latest_count = trend_df.iloc[-1]["registration_count"]
+    latest_month = trend_df.iloc[-1]["standard_ym"]
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric("총 누적 등록 대수", f"{total_count:,} 대")
+    m2.metric("월평균 등록 대수", f"{avg_count:,} 대")
+    m3.metric(f"최근 등록 ({latest_month})", f"{latest_count:,} 대")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # 4. Plotly 선 그래프(Line Chart) 생성
+    fig = px.line(
+        trend_df,
+        x="standard_ym",
+        y="registration_count",
+        markers=True,
+        title=f"📈 {car_name} 월별 등록 대수 추이",
+        labels={"standard_ym": "등록 월", "registration_count": "등록 대수(대)"},
+        text="registration_count"
+    )
+
+    # 그래프 스타일링
+    fig.update_traces(
+        line=dict(color="#2563eb", width=3),
+        marker=dict(size=8, color="#1e40af"),
+        textposition="top center",
+        texttemplate="%{text:,.0f}대"
+    )
+
+    fig.update_layout(
+        xaxis_type="category",  # 월별 라벨 깔끔하게 표시
+        hovermode="x unified",
+        margin=dict(l=20, r=20, t=50, b=20),
+        height=380
+    )
+
+    # Streamlit 화면에 그래프 출력
+    st.plotly_chart(fig, use_container_width=True)
+
 
 def registration_status_view():
-    section_title("자동차 등록 현황 조회", "수입차 및 국산차 구분, 연료별 자동차 등록 통계 데이터를 상세히 필터링하고 확인합니다.")
+    section_title("자동차 등록 현황 조회", "월별로 등록된 자동차 현황입니다. 행을 클릭하면 월별 등록 추이 그래프를 확인할 수 있습니다.")
+
     if registration_df.empty:
         st.warning("등록 현황 데이터가 존재하지 않습니다.")
         return
 
-    cols_order = ["logo"] + [col for col in registration_df.columns if col != "logo"]
-    st.dataframe(
-        registration_df[cols_order], 
-        use_container_width=True, 
+    # 1. 10개씩 페이징 처리
+    page_size = 10
+    total_items = len(registration_df)
+    total_pages = max((total_items + page_size - 1) // page_size, 1)
+
+    c_page, c_info = st.columns([3, 7])
+    with c_page:
+        page_number = st.number_input(
+            f"페이지 선택 (총 {total_pages} 페이지)", 
+            min_value=1, 
+            max_value=total_pages, 
+            value=1,
+            step=1,
+            key="reg_page_number"
+        )
+    with c_info:
+        st.markdown(f"<br><span style='color: #64748b; font-size: 0.9rem;'>총 <b>{total_items:,}</b>건 중 {((page_number-1)*page_size)+1} ~ {min(page_number*page_size, total_items)}번째 항목 표출</span>", unsafe_allow_html=True)
+
+    start_idx = (page_number - 1) * page_size
+    end_idx = start_idx + page_size
+
+    # 📌 클릭 인덱스 오작동 방지를 위한 reset_index
+    page_df = registration_df.iloc[start_idx:end_idx].copy().reset_index(drop=True)
+
+    display_cols = ["logo", "manufacturer", "car_model_type", "registration_count", "standard_ym"]
+    existing_cols = [col for col in display_cols if col in page_df.columns]
+
+    # 2. 10개 행 출력 및 클릭 이벤트 감지
+    event = st.dataframe(
+        page_df[existing_cols],
+        use_container_width=True,
         hide_index=True,
+        selection_mode="single-row",
+        on_select="rerun",
+        key="reg_status_table",
         column_config={
-            "logo": st.column_config.ImageColumn("로고", width="small")
+            "logo": st.column_config.ImageColumn("로고", width="small"),
+            "manufacturer": "제조사",
+            "car_model_type": "차종/모델",
+            "registration_count": st.column_config.NumberColumn("등록개수", format="%d 대"),
+            "standard_ym": "등록 월(Month)",
         }
     )
 
-def brand_ranking_view():
-    section_title("브랜드별 랭킹 순위", "조회하고자 하는 연월 조건을 선택하여 브랜드 등록 순위를 확인합니다.")
+    # 3. 행 선택 시 월별 등록 추이 그래프 팝업 출력
+    selected_rows = event.selection.get("rows", [])
+    if selected_rows:
+        selected_idx = selected_rows[0]
+        selected_row = page_df.iloc[selected_idx]
 
-    if brand_ranking_df.empty:
+        car_name = selected_row["car_model_type"]
+        manufacturer = selected_row["manufacturer"]
+        logo_url = selected_row.get("logo", "")
+        car_image_url = selected_row.get("car_image", "")
+
+        # 📌 전체 registration_df에서 해당 차종/모델의 월별 이력 데이터 전체를 추출
+        car_history_df = registration_df[registration_df["car_model_type"] == car_name]
+
+        # 팝업 호출
+        show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_url, car_history_df)
+
+# --- 📌 브랜드별 랭킹 뷰 ---
+def brand_ranking_view():
+    section_title("브랜드별 랭킹", "월별 국산/수입 브랜드 등록 순위 현황입니다. 클릭 시 브랜드 등록 추이를 확인할 수 있습니다.")
+
+    # 1. 데이터 검증 (car_brand_rank 또는 관련 데이터프레임 확인)
+    # ※ 만약 brand_ranking_df 변수명을 쓰고 계신다면 해당 변수명으로 맞춰주세요!
+    target_df = brand_ranking_df if 'brand_ranking_df' in globals() else registration_df
+
+    if target_df.empty:
         st.warning("브랜드 랭킹 데이터가 존재하지 않습니다.")
         return
 
-    selected_ym, _ = render_filter(brand_ranking_df, show_type_filter=False, key_prefix="brand_rank")
+    # 2. 필터링 (필요시)
+    target_ym, target_type = render_filter(target_df, show_type_filter=True, key_prefix="brand_rank")
 
-    filtered_df = brand_ranking_df.copy()
-    if selected_ym:
-        filtered_df = filtered_df[filtered_df["standard_ym"] == selected_ym]
-
-    st.markdown(f"#### 📊 **{selected_ym}** 등록 기준 브랜드 순위")
-    st.divider()
-
-    display_cols = ["logo", "brand_name", "registration_count", "mom_increase"]
-
-    left_col, right_col = st.columns(2, gap="large")
-
-    with left_col:
-        st.markdown("### 🇰🇷 국산차 브랜드 랭킹")
-        domestic_df = filtered_df[filtered_df["manufacturer_type"] == "국산"].copy()
-
-        if domestic_df.empty:
-            st.info(f"선택한 연월({selected_ym})의 국산차 브랜드 데이터가 없습니다.")
-        else:
-            st.dataframe(
-                domestic_df[display_cols],
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "logo": st.column_config.ImageColumn("로고", width="small"),
-                    "brand_name": "브랜드명",
-                    "registration_count": st.column_config.NumberColumn("등록대수", format="%d대"),
-                    "mom_increase": st.column_config.NumberColumn("전월대비(%)", format="%.1f%%"),
-                }
-            )
-
-    with right_col:
-        st.markdown("### 🌐 수입차 브랜드 랭킹")
-        imported_df = filtered_df[filtered_df["manufacturer_type"] == "수입"].copy()
-
-        if imported_df.empty:
-            st.info(f"선택한 연월({selected_ym})의 수입차 브랜드 데이터가 없습니다.")
-        else:
-            st.dataframe(
-                imported_df[display_cols],
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "logo": st.column_config.ImageColumn("로고", width="small"),
-                    "brand_name": "브랜드명",
-                    "registration_count": st.column_config.NumberColumn("등록대수", format="%d대"),
-                    "mom_increase": st.column_config.NumberColumn("전월대비(%)", format="%.1f%%"),
-                }
-            )
-
-def model_ranking_view():
-    section_title("모델별 랭킹 순위 및 리뷰", "조회하려는 연월 및 국산/수입 구분을 선택한 후 차종별 등록 순위를 확인하세요.")
-    if model_ranking_df.empty:
-        st.warning("모델별 랭킹 데이터가 존재하지 않습니다.")
-        return
-
-    selected_ym, selected_type = render_filter(model_ranking_df, show_type_filter=True, key_prefix="model_rank")
-
-    filtered_df = model_ranking_df.copy()
-
-    if selected_ym:
-        filtered_df = filtered_df[filtered_df["standard_ym"] == selected_ym]
-
-    if selected_type != "전체":
-        filtered_df = filtered_df[filtered_df["manufacturer_type"] == selected_type]
-
-    type_label = f"[{selected_type}] " if selected_type != "전체" else ""
-    st.markdown(f"### 📋 **{selected_ym}** {type_label}모델별 등록 랭킹 (행을 선택하면 팝업으로 리뷰가 표시됩니다)")
+    filtered_df = target_df.copy()
+    if target_ym and "standard_ym" in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df["standard_ym"] == target_ym]
+    if target_type != "전체" and "manufacturer_type" in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df["manufacturer_type"] == target_type]
 
     if filtered_df.empty:
-        st.info(f"선택한 조건({selected_ym}, {selected_type})에 일치하는 모델 데이터가 존재하지 않습니다.")
+        st.info("선택한 조건에 해당하는 브랜드 랭킹 데이터가 없습니다.")
         return
 
-    cols_order = ["logo", "brand_name", "car_name", "fuel_type", "registration_count", "mom_increase"]
+    # 인덱스 초기화
+    display_df = filtered_df.reset_index(drop=True)
+
+    # 3. 테이블 출력용 컬럼 설정
+    display_cols = ["logo", "brand_name", "registration_count", "mom_increase"]
+    existing_cols = [c for c in display_cols if c in display_df.columns]
 
     event = st.dataframe(
-        filtered_df[cols_order],
+        display_df[existing_cols],
+        use_container_width=True,
+        hide_index=True,
+        selection_mode="single-row",
+        on_select="rerun",
+        key="brand_rank_table",
+        column_config={
+            "logo": st.column_config.ImageColumn("로고", width="small"),
+            "brand_name": "브랜드명",
+            "registration_count": st.column_config.NumberColumn("등록대수", format="%d 대"),
+            "mom_increase": st.column_config.NumberColumn("전월 대비", format="%+d 대"),
+        }
+    )
+
+    # 4. 행 클릭 시 처리
+    selected_rows = event.selection.get("rows", [])
+    if selected_rows:
+        selected_idx = selected_rows[0]
+        selected_data = display_df.iloc[selected_idx]
+
+        brand_name = selected_data.get("brand_name", "브랜드")
+        logo_url = selected_data.get("logo", "")
+
+        # 해당 브랜드의 전체 월별 데이터 추출
+        brand_history_df = target_df[target_df["brand_name"] == brand_name] if "brand_name" in target_df.columns else pd.DataFrame()
+
+        # 등록 추이 팝업 호출 (이전에 만든 show_registration_trend_dialog 활용)
+        show_registration_trend_dialog(brand_name, "브랜드", logo_url, "", brand_history_df)
+
+def model_ranking_view():
+    section_title("모델별 랭킹", "월별 차량 모델별 등록순위 현황입니다. 클릭 시 리뷰를 확인할 수 있습니다.")
+
+    if model_ranking_df.empty:
+        st.warning("모델 랭킹 데이터가 존재하지 않습니다.")
+        return
+
+    target_ym, target_type = render_filter(model_ranking_df, show_type_filter=True, key_prefix="model_rank")
+
+    filtered_df = model_ranking_df.copy()
+    if target_ym:
+        filtered_df = filtered_df[filtered_df["standard_ym"] == target_ym]
+    if target_type != "전체":
+        filtered_df = filtered_df[filtered_df["manufacturer_type"] == target_type]
+
+    if filtered_df.empty:
+        st.info("선택한 조건에 해당하는 모델 랭킹 데이터가 없습니다.")
+        return
+
+    # 📌 핵심 수정 1: 클릭 인덱스와 데이터프레임 인덱스 일치를 위해 reset_index 수행
+    display_df = filtered_df.reset_index(drop=True)
+
+    display_cols = ["logo", "car_name", "brand_name", "fuel_type", "registration_count", "mom_increase"]
+    existing_cols = [c for c in display_cols if c in display_df.columns]
+
+    event = st.dataframe(
+        display_df[existing_cols],
         use_container_width=True,
         hide_index=True,
         selection_mode="single-row",
@@ -455,56 +742,45 @@ def model_ranking_view():
         key="model_rank_table",
         column_config={
             "logo": st.column_config.ImageColumn("로고", width="small"),
-            "brand_name": "브랜드명",
-            "car_name": "모델명",
+            "car_name": "차량명",
+            "brand_name": "브랜드",
             "fuel_type": "연료",
-            "registration_count": st.column_config.NumberColumn("등록대수", format="%d대"),
-            "mom_increase": st.column_config.NumberColumn("전월대비(%)", format="%.1f%%"),
+            "registration_count": st.column_config.NumberColumn("등록대수", format="%d 대"),
+            "mom_increase": st.column_config.NumberColumn("전월 대비", format="%+d 대"),
         }
     )
 
-    # 행 선택 시 새 창(Dialog 팝업) 띄우기
     selected_rows = event.selection.get("rows", [])
     if selected_rows:
-        selected_index = selected_rows[0]
-        selected_row_data = filtered_df.iloc[selected_index]
+        selected_idx = selected_rows[0]
 
-        car_name = selected_row_data.get("car_name")
-        model_id = selected_row_data.get("model_id")
-        logo_url = selected_row_data.get("logo")
+        # 📌 핵심 수정 2: reset_index가 적용된 display_df에서 정확한 행을 가져옴
+        selected_data = display_df.iloc[selected_idx]
 
-        # 팝업 호출
-        show_review_modal(car_name, model_id, logo_url)
+        model_id = selected_data.get("model_id")
+        car_name = selected_data.get("car_name", "차량 정보 없음")
+        logo_url = selected_data.get("logo", DEFAULT_LOGO)
+        car_image_url = selected_data.get("car_image", DEFAULT_CAR_IMAGE)
+
+        # 📌 핵심 수정 3: review_df 매핑 (model_id 또는 brand_name 매핑)
+        matched_reviews = review_df[review_df["model_id"] == model_id] if "model_id" in review_df.columns else pd.DataFrame()
+
+        show_review_dialog(car_name, logo_url, car_image_url, matched_reviews)
 
 def faq_view():
-    section_title("자주 하는 질문 (FAQ)", "차량 등록 관련 궁금한 점을 검색해 보세요.")
+    section_title("자주 묻는 질문 (FAQ)", "차량 등록 및 절차와 관련된 주요 FAQ 목록입니다.")
 
     if faq_df.empty:
-        st.warning("FAQ 데이터가 존재하지 않습니다.")
+        st.info("등록된 FAQ 데이터가 없습니다.")
         return
 
-    keyword = st.text_input("검색어 입력", placeholder="예: 신차, 명의, 취득세")
+    for _, row in faq_df.iterrows():
+        with st.expander(f"❓ {row['question']}"):
+            st.write(row['answer'])
 
-    result_faq = faq_df.copy()
-
-    if keyword:
-        matched = (
-            result_faq["question"].str.contains(keyword, case=False, na=False) | 
-            result_faq["answer"].str.contains(keyword, case=False, na=False)
-        )
-        result_faq = result_faq[matched]
-
-    st.caption(f"총 {len(result_faq)}건의 FAQ가 검색되었습니다.")
-
-    if result_faq.empty:
-        st.info("조건에 일치하는 FAQ가 없습니다.")
-        return
-
-    for _, faq in result_faq.iterrows():
-        with st.expander(f"Q. {faq['question']}"):
-            st.write(faq["answer"])
-
-# --- 라우팅 ---
+# ---------------------------------------------------------
+# Tab Routing
+# ---------------------------------------------------------
 if active_tab == "Home":
     home_view()
 elif active_tab == "자동차 등록 현황":

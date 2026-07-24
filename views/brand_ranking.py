@@ -1,91 +1,89 @@
-import pandas as pd
 import streamlit as st
-from db import get_engine
 
-engine = get_engine()
+def render_filter(df, show_type_filter=False, key_prefix="filter"):
+    if df.empty or "standard_ym" not in df.columns:
+        return None, None
+    available_yms = sorted(df["standard_ym"].unique(), reverse=True)
+    years = sorted(list(set([ym.split("-")[0] for ym in available_yms])), reverse=True)
 
-logo_url_map = {
-    "현대": "https://cdn.simpleicons.org/hyundai",
-    "기아": "https://cdn.simpleicons.org/kia",
-    "제네시스": "https://autoimg.danawa.com/photo/brand/304_90.png",
-    "르노코리아": "https://cdn.simpleicons.org/renault",
-    "BMW": "https://cdn.simpleicons.org/bmw",
-    "Mercedes-Benz": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
-    "Tesla": "https://cdn.simpleicons.org/tesla",
-    "Audi": "https://cdn.simpleicons.org/audi",
-    "Volvo": "https://cdn.simpleicons.org/volvo",
-    "Lexus": "https://autoimg.danawa.com/photo/brand/486_90.png",
-    "Mini": "https://cdn.simpleicons.org/mini",
-    "Porsche": "https://cdn.simpleicons.org/porsche",
-    "Volkswagen": "https://cdn.simpleicons.org/volkswagen",
-    "Land Rover": "https://autoimg.danawa.com/photo/brand/399_90.png"
-}
+    if show_type_filter:
+        c1, c2, c3, _ = st.columns([2, 2, 2, 4])
+    else:
+        c1, c2, _ = st.columns([2, 2, 6])
 
-@st.cache_data
-def load_brand_ranking_data():
-    try:
-        return pd.read_sql("SELECT * FROM brand_ranking_table", con=engine)
-    except Exception:
-        return pd.DataFrame(columns=["기준연월", "제조사구분", "브랜드", "등록대수", "전월대비증가"])
+    with c1:
+        selected_year = st.selectbox("📅 연도 선택", years, key=f"{key_prefix}_year")
+    
+    available_months = sorted(list(set([ym.split("-")[1] for ym in available_yms if ym.startswith(selected_year)])), reverse=True)
+    with c2:
+        selected_month = st.selectbox("📆 월 선택", available_months, key=f"{key_prefix}_month")
 
-def render():
+    selected_target_ym = f"{selected_year}-{selected_month}"
+    selected_type = "전체"
+    if show_type_filter:
+        with c3:
+            selected_type = st.selectbox("🚘 구분 선택", ["전체", "국산", "수입"], key=f"{key_prefix}_type")
+
+    return selected_target_ym, selected_type
+
+def brand_ranking_view(brand_ranking_df):
     st.markdown(
         """
-        <div style="padding: 1.2rem 1.3rem; border-radius: 18px; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 55%, #f8fafc 100%); border: 1px solid #dbeafe; margin-bottom: 1rem;">
+        <div class="hero">
             <h1 style="margin-bottom:0.2rem;">브랜드별 랭킹 순위</h1>
-            <div style="font-size: 0.95rem; color: #475569;">수입/국산 및 연도(월) 조건을 선택하여 브랜드 등록 순위를 확인합니다.</div>
+            <div class="subtext">조회하고자 하는 연월 조건을 선택하여 브랜드 등록 순위를 확인합니다.</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
     
-    brand_ranking_df = load_brand_ranking_data()
-
     if brand_ranking_df.empty:
-        st.warning("연동된 데이터베이스에 브랜드 랭킹 데이터가 존재하지 않습니다.")
+        st.warning("브랜드 랭킹 데이터가 존재하지 않습니다.")
         return
 
-    c1, c2 = st.columns(2)
-    with c1:
-        maker_type = st.selectbox("제조사 구분 선택", ["국산차", "수입차"])
-    with c2:
-        available_months = sorted(brand_ranking_df["기준연월"].unique(), reverse=True)
-        selected_month = st.selectbox("기준 연월 선택", available_months)
+    selected_ym, _ = render_filter(brand_ranking_df, show_type_filter=False, key_prefix="brand_rank")
+    filtered_df = brand_ranking_df.copy()
+    if selected_ym:
+        filtered_df = filtered_df[filtered_df["standard_ym"] == selected_ym]
 
-    filtered = brand_ranking_df[
-        (brand_ranking_df["제조사구분"] == maker_type) & 
-        (brand_ranking_df["기준연월"] == selected_month)
-    ].copy()
+    st.markdown(f"#### 📊 **{selected_ym}** 등록 기준 브랜드 순위")
+    st.divider()
 
-    if not filtered.empty:
-        filtered = filtered.sort_values(by="등록대수", ascending=False).reset_index(drop=True)
-        filtered.index = filtered.index + 1
-        filtered.insert(0, "순위", filtered.index)
-        filtered["증감률(%)"] = (filtered["전월대비증가"] / (filtered["등록대수"] - filtered["전월대비증가"]) * 100).round(2)
-        filtered["브랜드 로고"] = filtered["브랜드"].map(logo_url_map)
+    display_cols = ["logo", "brand_name", "registration_count", "mom_increase"]
+    left_col, right_col = st.columns(2, gap="large")
 
-    st.markdown(f"### 📌 [{selected_month}] {maker_type} 브랜드 등록 랭킹")
-    
-    if not filtered.empty:
-        display_df = filtered[["순위", "브랜드 로고", "브랜드", "등록대수", "전월대비증가", "증감률(%)"]].rename(
-            columns={"전월대비증가": "전월대비 증가량"}
-        )
-        st.dataframe(
-            display_df,
-            column_config={
-                "브랜드 로고": st.column_config.ImageColumn("브랜드 로고", width="small")
-            },
-            use_container_width=True,
-            hide_index=True,
-        )
+    with left_col:
+        st.markdown("### 🇰🇷 국산차 브랜드 랭킹")
+        domestic_df = filtered_df[filtered_df["manufacturer_type"] == "국산"].copy()
+        if domestic_df.empty:
+            st.info(f"선택한 연월({selected_ym})의 국산차 브랜드 데이터가 없습니다.")
+        else:
+            st.dataframe(
+                domestic_df[display_cols],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "logo": st.column_config.ImageColumn("로고", width="small"),
+                    "brand_name": "브랜드명",
+                    "registration_count": st.column_config.NumberColumn("등록대수", format="%d대"),
+                    "mom_increase": st.column_config.NumberColumn("전월대비(%)", format="%.1f%%"),
+                }
+            )
 
-        download_df = display_df.drop(columns=["브랜드 로고"])
-        st.download_button(
-            "브랜드 랭킹 데이터 다운로드 (CSV)",
-            download_df.to_csv(index=False).encode("utf-8-sig"),
-            f"브랜드_랭킹_{selected_month}.csv",
-            "text/csv",
-            use_container_width=True,
-        )
-    else:
-        st.info("조건에 해당하는 브랜드 데이터가 없습니다.")
+    with right_col:
+        st.markdown("### 🌐 수입차 브랜드 랭킹")
+        imported_df = filtered_df[filtered_df["manufacturer_type"] == "수입"].copy()
+        if imported_df.empty:
+            st.info(f"선택한 연월({selected_ym})의 수입차 브랜드 데이터가 없습니다.")
+        else:
+            st.dataframe(
+                imported_df[display_cols],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "logo": st.column_config.ImageColumn("로고", width="small"),
+                    "brand_name": "브랜드명",
+                    "registration_count": st.column_config.NumberColumn("등록대수", format="%d대"),
+                    "mom_increase": st.column_config.NumberColumn("전월대비(%)", format="%.1f%%"),
+                }
+            )

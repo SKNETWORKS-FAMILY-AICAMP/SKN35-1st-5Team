@@ -71,60 +71,62 @@ def init_database_tables():
     engine = get_engine()
     
     create_tables_sql = """
-    -- 1. 자동차 등록 현황 테이블 (부모 테이블)
+    -- 자동차 등록 현황
     CREATE TABLE IF NOT EXISTS car_registration (
-        regist_id INT AUTO_INCREMENT PRIMARY KEY,
-        manufacturer_type VARCHAR(20),
-        manufacturer VARCHAR(50),
-        car_model_type VARCHAR(50),
-        fuel_type VARCHAR(50),
-        registration_count INT,
-        standard_ym VARCHAR(20)
+        regist_id VARCHAR(255) NOT NULL,
+        company_type VARCHAR(255),
+        company_name VARCHAR(255),
+        model_name VARCHAR(255),
+        count_car_month VARCHAR(255),
+        standard_month VARCHAR(255) NOT NULL,
+        PRIMARY KEY (regist_id)
     );
 
-    -- 2. 브랜드별 랭킹 테이블
+    -- 브랜드 랭킹
     CREATE TABLE IF NOT EXISTS car_brand_rank (
-        brand_id INT AUTO_INCREMENT PRIMARY KEY,
-        regist_id INT,
-        standard_ym VARCHAR(20),
-        brand_name VARCHAR(50),
-        registration_count INT,
-        mom_increase INT,
-        FOREIGN KEY (regist_id) REFERENCES car_registration(regist_id) ON DELETE CASCADE
+        brand_id VARCHAR(255) NOT NULL,
+        regist_id VARCHAR(255) NOT NULL,
+        compare_car_month VARCHAR(255),
+        brand_standard_month VARCHAR(255) NOT NULL,
+        brand_name VARCHAR(255) NOT NULL,
+        PRIMARY KEY (brand_id, regist_id),
+        CONSTRAINT FK_car_registration_TO_car_brand_rank
+            FOREIGN KEY (regist_id)
+            REFERENCES car_registration(regist_id)
     );
 
-    -- 3. 모델별 랭킹 테이블
-    CREATE TABLE IF NOT EXISTS car_model_rank (
-        model_id INT AUTO_INCREMENT PRIMARY KEY,
-        regist_id INT,
-        standard_ym VARCHAR(20),
-        brand_name VARCHAR(50),
-        car_name VARCHAR(100),
-        fuel_type VARCHAR(50),
-        registration_count INT,
-        mom_increase INT,
-        FOREIGN KEY (regist_id) REFERENCES car_registration(regist_id) ON DELETE CASCADE
+    -- 모델 랭킹
+    CREATE TABLE IF NOT EXISTS car_model_ranking (
+        model_id VARCHAR(255) NOT NULL,
+        regist_id VARCHAR(255) NOT NULL,
+        compare_car_month VARCHAR(255),
+        standard_month VARCHAR(255) NOT NULL,
+        brand_name VARCHAR(255),
+        PRIMARY KEY (model_id, regist_id),
+        CONSTRAINT FK_car_registration_TO_car_model_ranking
+            FOREIGN KEY (regist_id)
+            REFERENCES car_registration(regist_id)
     );
 
-    -- 4. 리뷰 / 제원 및 평가 테이블
+    -- 리뷰
     CREATE TABLE IF NOT EXISTS review (
-        review_id INT AUTO_INCREMENT PRIMARY KEY,
-        model_id INT,
-        regist_id INT,
-        overall_rating FLOAT,
-        performance VARCHAR(100),
-        price BIGINT,
-        issues TEXT,
-        brand_name VARCHAR(50),
-        FOREIGN KEY (model_id) REFERENCES car_model_rank(model_id) ON DELETE CASCADE,
-        FOREIGN KEY (regist_id) REFERENCES car_registration(regist_id) ON DELETE CASCADE
+        review_id VARCHAR(255) NOT NULL,
+        model_id VARCHAR(255) NOT NULL,
+        regist_id VARCHAR(255) NOT NULL,
+        total_review VARCHAR(255),
+        performance_review VARCHAR(255),
+        price_review VARCHAR(255),
+        problem_review VARCHAR(255),
+        brand_name_review VARCHAR(255),
+        PRIMARY KEY (review_id)
     );
 
-    -- 5. FAQ 테이블 (카테고리 제거, 차량 등록 관련 내용만 유지)
+    -- FAQ
     CREATE TABLE IF NOT EXISTS faq (
-        faq_id INT AUTO_INCREMENT PRIMARY KEY,
-        question TEXT,
-        answer TEXT
+        faq_id INT AUTO_INCREMENT NOT NULL,
+        question VARCHAR(255),
+        answer TEXT, 
+        PRIMARY KEY (faq_id)
     );
     """
 
@@ -136,7 +138,6 @@ def init_database_tables():
     insert_initial_faqs(engine)
 
 def insert_initial_faqs(engine):
-    """FAQ 데이터가 비어있을 때만 차량 등록 관련 샘플 데이터를 적재합니다."""
     faq_data = [
         {
             "question": "신차를 구입한 후 등록까지 며칠 이내에 해야 하나요?",
@@ -183,14 +184,13 @@ def insert_initial_faqs(engine):
     df = pd.DataFrame(faq_data)
     
     try:
-        existing_df = pd.read_sql("SELECT COUNT(*) as cnt FROM faq", con=engine)
-        if existing_df['cnt'][0] == 0:
-            df.to_sql(name="faq", con=engine, if_exists="append", index=False)
-            print("FAQ 샘플 데이터가 성공적으로 적재되었습니다!")
-        else:
-            print("FAQ 테이블에 이미 데이터가 존재하여 생략합니다.")
+        df.to_sql(name="faq", con=engine, if_exists="append", index=False)
+        print("FAQ 데이터 적재 성공!")
     except Exception as e:
         print(f"FAQ 데이터 적재 중 예외 발생: {e}")
+
+
+
 if __name__ == "__main__":
     init_database_tables()
     print("데이터베이스 초기화 스크립트 실행이 완료되었습니다.")

@@ -6,6 +6,8 @@ import streamlit as st
 import plotly.express as px
 from streamlit_option_menu import option_menu
 from sqlalchemy import text
+import random
+import time
 
 # db.py에서 SQLAlchemy 엔진 가져오기
 from db import get_engine
@@ -420,9 +422,13 @@ def home_view():
 
     st.divider()
 
+    # --- 📌 2초 간격 랜덤 브랜드 로고 영역 ---
     st.markdown("### 🏆 주요 제조사 로고")
-    cols = st.columns(len(LOGO_URL_MAP))
-    for idx, (brand, url) in enumerate(LOGO_URL_MAP.items()):
+
+    shuffled_logos = list(LOGO_URL_MAP.items())
+    random.shuffle(shuffled_logos)
+    cols = st.columns(len(shuffled_logos))
+    for idx, (brand, url) in enumerate(shuffled_logos):
         with cols[idx % len(cols)]:
             st.image(url, width=45)
 
@@ -507,6 +513,12 @@ def home_view():
                         matched_reviews = review_df[review_df["model_id"] == model_id]
 
                         show_review_dialog(car_name, logo_url, car_image_url, matched_reviews)
+
+    # 검색어를 입력하고 있을 때 타자 입력이 방해받거나 무한 루프가 끊기는 현상을 방지
+    # 사용자가 검색 상자에 입력 중이 아닐 때만 2초 후 rerun 실행
+    if not review_keyword.strip():
+        time.sleep(2)
+        st.rerun()
 
 @st.dialog("📊 월별 등록 대수 추이 분석", width="large")
 def show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_url, car_history_df):
@@ -651,7 +663,6 @@ def brand_ranking_view():
     section_title("브랜드별 랭킹", "월별 국산/수입 브랜드 등록 순위 현황입니다. 클릭 시 브랜드 등록 추이를 확인할 수 있습니다.")
 
     # 1. 데이터 검증 (car_brand_rank 또는 관련 데이터프레임 확인)
-    # ※ 만약 brand_ranking_df 변수명을 쓰고 계신다면 해당 변수명으로 맞춰주세요!
     target_df = brand_ranking_df if 'brand_ranking_df' in globals() else registration_df
 
     if target_df.empty:

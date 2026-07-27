@@ -28,6 +28,8 @@ CAR_IMAGE_URL_MAP = {
     "테슬라 모델 Y": "https://file.carisyou.com/upload/2025/03/28/thumb/FILE_202503280326303300.png",
     "비야디 돌핀": "https://file.carisyou.com/upload/2026/02/05/thumb/FILE_202602050221397310.png",
     "BMW 5시리즈": "https://file.carisyou.com/upload/2023/09/06/thumb/FILE_202309061102221390.png",
+    "BMW 3시리즈" : "https://file.carisyou.com/upload/2024/11/07/thumb/FILE_202411071109277780.png",
+    "BMW 7시리즈" : "https://file.carisyou.com/upload/2022/07/08/thumb/FILE_202207080916071430.png",
     "벤츠 E클래스": "https://file.carisyou.com/upload/2024/01/04/thumb/FILE_202401040227284180.png",
     "벤츠 GLC": "https://file.carisyou.com/upload/2026/07/09/thumb/FILE_202607090356077700.png",
     "비야디 씨라이언 7": "https://file.carisyou.com/upload/2025/09/08/thumb/FILE_202509080508098370.png",

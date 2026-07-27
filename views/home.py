@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import random
 import time
+from sqlalchemy import text
 from db import get_engine
 
 LOGO_URL_MAP = {
@@ -130,6 +131,29 @@ def load_review_data():
     if not df.empty:
         df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
     return df
+
+@st.cache_data(ttl=3600)
+def load_review_model_match_data():
+    engine = get_engine()
+    query = """
+    SELECT DISTINCT
+    r.review_id,
+    r.brand_name_review AS 리뷰브랜드명,
+    cm.model_id,
+    cm.brand_name AS 모델별브랜드명,
+    cr.model_name AS 자동차등록제조사
+FROM
+    review r
+LEFT JOIN 
+    car_model_ranking cm 
+    ON REPLACE(r.brand_name_review, ' ', '') LIKE CONCAT('%', REPLACE(cm.brand_name, ' ', ''), '%')
+    OR REPLACE(cm.brand_name, ' ', '') LIKE CONCAT('%', REPLACE(r.brand_name_review, ' ', ''), '%')
+LEFT JOIN
+    car_registration cr
+    ON REPLACE(r.brand_name_review, ' ', '') LIKE CONCAT('%', REPLACE(cr.model_name, ' ', ''), '%')
+    OR REPLACE(cr.model_name, ' ', '') LIKE CONCAT('%', REPLACE(r.brand_name_review, ' ', ''), '%');
+    """
+    return pd.read_sql(text(query), con=engine)
 
 @st.cache_data(ttl=3600)
 def load_faq_data():

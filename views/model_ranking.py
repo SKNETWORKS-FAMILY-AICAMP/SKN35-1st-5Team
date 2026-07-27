@@ -3,6 +3,7 @@ import math
 from views.home import (
     load_model_ranking_data,
     load_review_data,
+    load_review_model_match_data,
     section_title,
     show_review_dialog,
 )
@@ -12,6 +13,7 @@ from constants import CAR_IMAGE_URL_MAP, DEFAULT_CAR_IMAGE
 def model_ranking_view():
     model_ranking_df = load_model_ranking_data()
     review_df = load_review_data()
+    review_match_df = load_review_model_match_data()
 
     # 상단 타이틀과 우측 상단 CSV 다운로드 버튼 배치
     c_title, c_btn = st.columns([4, 1])

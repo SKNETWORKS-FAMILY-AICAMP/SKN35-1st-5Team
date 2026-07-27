@@ -1,13 +1,26 @@
 import streamlit as st
 import math
-from views.home import (
-    load_model_ranking_data,
-    load_review_data,
-    section_title,
-    show_review_dialog,
-)
+from views.home import section_title
+from data_loader import load_model_ranking_data, load_review_data
 from views.brand_ranking import render_filter
+from dialogs import show_review_dialog
 from constants import CAR_IMAGE_URL_MAP, DEFAULT_CAR_IMAGE
+
+
+def _match_reviews_by_car_name(review_df, car_name):
+    """regist_id/model_id는 등록 월마다 새로 발급되는 스냅샷 ID라 리뷰와 매칭이 안 되므로,
+    브랜드+모델명 텍스트를 정규화해 양방향 부분일치로 매칭한다."""
+    if review_df.empty or "brand_name" not in review_df.columns or not car_name:
+        return review_df.iloc[0:0]
+
+    target = str(car_name).replace(" ", "").strip()
+    if not target:
+        return review_df.iloc[0:0]
+
+    normalized = review_df["brand_name"].fillna("").astype(str).str.replace(" ", "", regex=False)
+    mask = normalized.apply(lambda name: bool(name) and (name in target or target in name))
+    return review_df[mask]
+
 
 def model_ranking_view():
     model_ranking_df = load_model_ranking_data()
@@ -32,7 +45,7 @@ def model_ranking_view():
         filtered_df = filtered_df[filtered_df["manufacturer_type"] == target_type]
 
     agg_cols = {"registration_count": "sum"}
-    for col in ["model_id", "logo", "car_image"]:
+    for col in ["model_id", "regist_id", "logo", "car_image"]:
         if col in filtered_df.columns:
             agg_cols[col] = "first"
 
@@ -155,11 +168,7 @@ def model_ranking_view():
             with col_action:
                 st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
                 if st.button("💬 리뷰 보기", key=f"btn_review_{global_rank}_{model_id}"):
-                    matched_reviews = (
-                        review_df[review_df["model_id"] == model_id]
-                        if not review_df.empty and "model_id" in review_df.columns
-                        else review_df.iloc[0:0]
-                    )
+                    matched_reviews = _match_reviews_by_car_name(review_df, car_name)
                     show_review_dialog(car_name, logo_url, car_image_url, matched_reviews)
 
     # 하단 페이징 버튼 한번 더 제공 (편의성)

@@ -1,6 +1,9 @@
 import streamlit as st
 import plotly.express as px
 
+from data_loader import load_registration_data
+from constants import CAR_IMAGE_URL_MAP, DEFAULT_CAR_IMAGE
+
 
 @st.dialog("📈 월별 등록 추이 분석", width="large")
 def show_trend_dialog(car_name, logo_url, car_image_url, full_df):
@@ -39,46 +42,6 @@ def show_trend_dialog(car_name, logo_url, car_image_url, full_df):
             st.metric("최근 월 등록 대수", f"{latest_count:,} 대")
         with m2:
             st.metric("기간 내 변동 폭", f"{diff:+,} 대")
-
-
-@st.dialog("📝 차량 상세 리뷰", width="large")
-def show_review_dialog(car_name, logo_url, car_image_url, matched_reviews):
-    c_logo, c_title, c_img = st.columns([1, 4, 3])
-
-    with c_logo:
-        if logo_url:
-            st.image(logo_url, width=45)
-
-    with c_title:
-        st.markdown(f"### **{car_name}**")
-        st.caption(f"등록된 실사용자 리뷰: **{len(matched_reviews)}개**")
-
-    with c_img:
-        if car_image_url:
-            st.image(car_image_url, width=160)
-
-    st.divider()
-
-    if matched_reviews.empty:
-        st.info(f"'{car_name}'에 대한 등록된 상세 리뷰가 없습니다.")
-    else:
-        for idx, row in matched_reviews.reset_index(drop=True).iterrows():
-            st.markdown(f"**리뷰 #{idx + 1}**")
-
-            performance = row.get("performance", "-")
-            price = row.get("price", "-")
-            issues = row.get("issues", "-")
-
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.info(f"**🚀 주행/성능**\n\n{performance}")
-            with c2:
-                st.success(f"**💰 가격/가성비**\n\n{price}")
-            with c3:
-                st.warning(f"**⚠️ 단점/아쉬운 점**\n\n{issues}")
-
-            if idx < len(matched_reviews) - 1:
-                st.markdown("<hr style='margin: 12px 0; border: 0.5px solid #e2e8f0;'>", unsafe_allow_html=True)
 
 
 @st.dialog("📊 월별 등록 대수 추이 분석", width="large")
@@ -149,10 +112,8 @@ def show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_u
 
     # Streamlit 화면에 그래프 출력
     st.plotly_chart(fig, use_container_width=True)
-<<<<<<< Updated upstream
-=======
 
-
+    
 def _render_star_rating(score, max_score=5.0):
     """0.5점 단위 실수 평점을 별 아이콘 바(HTML)로 변환합니다."""
     try:
@@ -213,7 +174,7 @@ def show_review_dialog(car_name, logo_url, car_image_url, matched_reviews):
             if idx < len(matched_reviews) - 1:
                 st.markdown("<hr style='margin: 12px 0; border: 0.5px solid #e2e8f0;'>", unsafe_allow_html=True)
 
-
+                
 @st.dialog("📊 브랜드 분석 및 모델별 순위", width="large")
 def show_brand_trend_dialog(brand_name, logo_url, brand_history_df):
     # 상단 브랜드 정보 표시
@@ -351,4 +312,3 @@ def show_brand_trend_dialog(brand_name, logo_url, brand_history_df):
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.warning("해당 조건의 추이 데이터가 없습니다.")
->>>>>>> Stashed changes

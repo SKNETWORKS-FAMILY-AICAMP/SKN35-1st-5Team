@@ -1,68 +1,7 @@
 import streamlit as st
-from views.home import load_registration_data, section_title, DEFAULT_CAR_IMAGE
-
-@st.dialog("📊 월별 등록 대수 추이 분석", width="large")
-def show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_url, car_history_df):
-    c_logo, c_title, c_img = st.columns([1, 4, 3])
-    
-    with c_logo:
-        if logo_url:
-            st.image(logo_url, width=45)
-            
-    with c_title:
-        st.markdown(f"### **[{manufacturer}] {car_name}**")
-        st.caption("월별 신규 등록 대수 변화 추이")
-
-    with c_img:
-        if car_image_url:
-            st.image(car_image_url, width=150)
-
-    st.divider()
-
-    if car_history_df.empty:
-        st.info(f"'{car_name}' 모델에 대한 월별 등록 추이 데이터가 없습니다.")
-        return
-
-    trend_df = car_history_df.sort_values(by="standard_ym", ascending=True).copy()
-
-    total_count = trend_df["registration_count"].sum()
-    avg_count = int(trend_df["registration_count"].mean())
-    latest_count = trend_df.iloc[-1]["registration_count"]
-    latest_month = trend_df.iloc[-1]["standard_ym"]
-
-    m1, m2, m3 = st.columns(3)
-    m1.metric("총 누적 등록 대수", f"{total_count:,} 대")
-    m2.metric("월평균 등록 대수", f"{avg_count:,} 대")
-    m3.metric(f"최근 등록 ({latest_month})", f"{latest_count:,} 대")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    import plotly.express as px
-    fig = px.line(
-        trend_df,
-        x="standard_ym",
-        y="registration_count",
-        markers=True,
-        title=f"📈 {car_name} 월별 등록 대수 추이",
-        labels={"standard_ym": "등록 월", "registration_count": "등록 대수(대)"},
-        text="registration_count"
-    )
-
-    fig.update_traces(
-        line=dict(color="#2563eb", width=3),
-        marker=dict(size=8, color="#1e40af"),
-        textposition="top center",
-        texttemplate="%{text:,.0f}대"
-    )
-    
-    fig.update_layout(
-        xaxis_type="category",
-        hovermode="x unified",
-        margin=dict(l=20, r=20, t=50, b=20),
-        height=380
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+from views.home import section_title
+from data_loader import load_registration_data
+from dialogs import show_registration_trend_dialog
 
 def registration_status_view():
     registration_df = load_registration_data()

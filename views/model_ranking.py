@@ -1,13 +1,9 @@
 import streamlit as st
 import math
-from views.home import (
-    load_model_ranking_data,
-    load_review_data,
-    load_review_model_match_data,
-    section_title,
-    show_review_dialog,
-)
+from views.home import section_title
+from data_loader import load_model_ranking_data, load_review_data, load_review_model_match_data
 from views.brand_ranking import render_filter
+from dialogs import show_review_dialog
 from constants import CAR_IMAGE_URL_MAP, DEFAULT_CAR_IMAGE
 
 def model_ranking_view():

@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from sqlalchemy import text
 
 from db import get_engine
 from constants import LOGO_URL_MAP, CAR_IMAGE_URL_MAP, DEFAULT_LOGO, DEFAULT_CAR_IMAGE
@@ -60,14 +61,14 @@ def load_model_ranking_data():
     engine = get_engine()
     query = """
     SELECT m.model_id, 
-           m.regist_id, 
-           m.brand_name, 
-           m.standard_month AS standard_ym, 
-           m.compare_car_month AS mom_increase,
-           r.model_name AS car_name,
-           r.count_car_month AS registration_count,
-           r.company_type AS manufacturer_type,
-           '휘발유/디젤/전기' AS fuel_type  -- 기본 표시용
+            m.regist_id, 
+            m.brand_name, 
+            m.standard_month AS standard_ym, 
+            m.compare_car_month AS mom_increase,
+            r.model_name AS car_name,
+            r.count_car_month AS registration_count,
+            r.company_type AS manufacturer_type,
+            '휘발유/디젤/전기' AS fuel_type
     FROM car_model_ranking m
     LEFT JOIN car_registration r ON m.regist_id = r.regist_id
     ORDER BY m.standard_month DESC
@@ -109,3 +110,27 @@ def load_faq_data():
     engine = get_engine()
     query = "SELECT faq_id, question, answer FROM faq ORDER BY faq_id ASC"
     return pd.read_sql(query, con=engine)
+
+# 모델 랭킹에서 리뷰 가져오는
+@st.cache_data(ttl=3600)
+def load_review_model_match_data():
+    engine = get_engine()
+    query = """
+    SELECT DISTINCT
+    r.review_id,
+    r.brand_name_review AS 리뷰브랜드명,
+    cm.model_id,
+    cm.brand_name AS 모델별브랜드명,
+    cr.model_name AS 자동차등록제조사
+FROM
+    review r
+LEFT JOIN 
+    car_model_ranking cm 
+    ON REPLACE(r.brand_name_review, ' ', '') LIKE CONCAT('%', REPLACE(cm.brand_name, ' ', ''), '%')
+    OR REPLACE(cm.brand_name, ' ', '') LIKE CONCAT('%', REPLACE(r.brand_name_review, ' ', ''), '%')
+LEFT JOIN
+    car_registration cr
+    ON REPLACE(r.brand_name_review, ' ', '') LIKE CONCAT('%', REPLACE(cr.model_name, ' ', ''), '%')
+    OR REPLACE(cr.model_name, ' ', '') LIKE CONCAT('%', REPLACE(r.brand_name_review, ' ', ''), '%');
+    """
+    return pd.read_sql(text(query), con=engine)

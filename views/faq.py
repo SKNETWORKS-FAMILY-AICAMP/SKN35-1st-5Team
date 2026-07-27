@@ -1,5 +1,6 @@
 import streamlit as st
-from views.home import load_faq_data, section_title
+from views.home import section_title
+from data_loader import load_faq_data
 
 def faq_view():
     faq_df = load_faq_data()

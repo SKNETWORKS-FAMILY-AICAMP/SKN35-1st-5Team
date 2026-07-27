@@ -1,15 +1,14 @@
 import streamlit as st
+from views.home import load_faq_data, section_title
 
-from components import section_title
-
-
-def faq_view(faq_df):
-    section_title("자주 묻는 질문 (FAQ)", "차량 등록 및 절차와 관련된 주요 FAQ 목록입니다.")
+def faq_view():
+    faq_df = load_faq_data()
+    section_title("자주 묻는 질문 (FAQ)", "자동차 등록, 명의 변경 및 이전 관련 궁금증을 해결해 드립니다.")
 
     if faq_df.empty:
         st.info("등록된 FAQ 데이터가 없습니다.")
         return
 
     for _, row in faq_df.iterrows():
-        with st.expander(f"❓ {row['question']}"):
-            st.write(row["answer"])
+        with st.expander(f"Q. {row['question']}"):
+            st.markdown(f"**A.** {row['answer']}")

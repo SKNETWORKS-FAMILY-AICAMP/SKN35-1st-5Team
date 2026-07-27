@@ -128,6 +128,8 @@ def init_database_tables():
         answer TEXT, 
         PRIMARY KEY (faq_id)
     );
+
+    -- 7. QnA 테이블
     """
 
     with engine.begin() as conn:

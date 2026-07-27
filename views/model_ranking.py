@@ -2,6 +2,7 @@ import streamlit as st
 from views.home import (
     load_model_ranking_data,
     load_review_data,
+    load_review_model_match_data,
     section_title,
     show_review_dialog,
 )
@@ -12,6 +13,7 @@ from constants import CAR_IMAGE_URL_MAP, DEFAULT_CAR_IMAGE
 def model_ranking_view():
     model_ranking_df = load_model_ranking_data()
     review_df = load_review_data()
+    review_match_df = load_review_model_match_data()
 
     section_title(
         "모델별 랭킹 순위",
@@ -102,9 +104,14 @@ def model_ranking_view():
         car_image_url = selected_data.get("car_image", "")
         model_id = selected_data.get("model_id")
 
+        matched_review_ids = (
+            review_match_df.loc[review_match_df["model_id"] == model_id, "review_id"].dropna().unique()
+            if not review_match_df.empty
+            else []
+        )
         matched_reviews = (
-            review_df[review_df["model_id"] == model_id]
-            if not review_df.empty and "model_id" in review_df.columns
+            review_df[review_df["review_id"].isin(matched_review_ids)]
+            if not review_df.empty and "review_id" in review_df.columns
             else review_df.iloc[0:0]
         )
 

@@ -41,46 +41,6 @@ def show_trend_dialog(car_name, logo_url, car_image_url, full_df):
             st.metric("기간 내 변동 폭", f"{diff:+,} 대")
 
 
-@st.dialog("📝 차량 상세 리뷰", width="large")
-def show_review_dialog(car_name, logo_url, car_image_url, matched_reviews):
-    c_logo, c_title, c_img = st.columns([1, 4, 3])
-
-    with c_logo:
-        if logo_url:
-            st.image(logo_url, width=45)
-
-    with c_title:
-        st.markdown(f"### **{car_name}**")
-        st.caption(f"등록된 실사용자 리뷰: **{len(matched_reviews)}개**")
-
-    with c_img:
-        if car_image_url:
-            st.image(car_image_url, width=160)
-
-    st.divider()
-
-    if matched_reviews.empty:
-        st.info(f"'{car_name}'에 대한 등록된 상세 리뷰가 없습니다.")
-    else:
-        for idx, row in matched_reviews.reset_index(drop=True).iterrows():
-            st.markdown(f"**리뷰 #{idx + 1}**")
-
-            performance = row.get("performance", "-")
-            price = row.get("price", "-")
-            issues = row.get("issues", "-")
-
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.info(f"**🚀 주행/성능**\n\n{performance}")
-            with c2:
-                st.success(f"**💰 가격/가성비**\n\n{price}")
-            with c3:
-                st.warning(f"**⚠️ 단점/아쉬운 점**\n\n{issues}")
-
-            if idx < len(matched_reviews) - 1:
-                st.markdown("<hr style='margin: 12px 0; border: 0.5px solid #e2e8f0;'>", unsafe_allow_html=True)
-
-
 @st.dialog("📊 월별 등록 대수 추이 분석", width="large")
 def show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_url, car_history_df):
     # 1. 팝업 헤더 영역 (로고, 차종명, 이미지)

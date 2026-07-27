@@ -96,10 +96,10 @@ def insert_review_datas(
   cursor.execute(sql_total_review, total_review_data)
 
 
-def print_detail_texts(driver, index):
+def print_detail_texts(driver, index,car_name):
   connection = get_db_connection()
   try:
-    car_name_selector = "#mocha_car > h3 > a"
+    #car_name_selector = "#mocha_car > h3 > a"
     area_detail = "#depth_main > div > div.box_g.box_total > div.area_detail"
     area_review = "#depth_main > div > div.box_g.box_total > div.area_review"
     perform_detail = (
@@ -108,9 +108,9 @@ def print_detail_texts(driver, index):
     price_detail = "#depth_main > div > div.box_g.box_price > div.area_summary"
     fault_detail = "#depth_main > div > div.box_g.box_faulty > div.area_summary"
 
-    car_name_elem = WebDriverWait(driver, 5).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, car_name_selector))
-    )
+    # car_name_elem = WebDriverWait(driver, 5).until(
+    #     EC.presence_of_element_located((By.CSS_SELECTOR, car_name_selector))
+    # )
     area_detail_container = WebDriverWait(driver, 5).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, area_detail))
     )
@@ -155,7 +155,7 @@ def print_detail_texts(driver, index):
     for_in_print(fault_detail_elements[0:2], "문제점")
 
     # 데이터 파싱
-    car_name = car_name_elem.text.strip()
+    car_name = car_name.split("(")[0].replace("-"," ").strip()
 
     detail_title = (
         area_detail_elements[0].text.strip()
@@ -243,20 +243,21 @@ def print_detail_texts(driver, index):
 def open_links_and_scrape(driver, start_idx):
   main_window = driver.current_window_handle
   links = driver.find_elements(By.CSS_SELECTOR, "#list_mocha li a")
-  href_list = [
-      link.get_attribute("href") for link in links if link.get_attribute("href")
-  ]
+  href_list = [link.get_attribute("href") for link in links if link.get_attribute("href")]
 
   print(f"총 {len(href_list)}개의 링크를 발견했습니다.")
   current_idx = start_idx
 
-  for href in href_list:
+  for href in [link for link in links if link.get_attribute("href")]:
+    alink = href.get_attribute("href")
+    car_name =  href.find_elements(By.CSS_SELECTOR, "strong")
+    car_name =  car_name[0].text
+
     print(f"\n--- [전체 순번: {current_idx}] 링크 처리 중 ---")
-    driver.execute_script("window.open(arguments[0], '_blank');", href)
+    driver.execute_script("window.open(arguments[0], '_blank');", alink)
     all_windows = driver.window_handles
     driver.switch_to.window(all_windows[-1])
-
-    print_detail_texts(driver, current_idx)
+    print_detail_texts(driver, current_idx, car_name)
 
     driver.close()
     driver.switch_to.window(main_window)

@@ -114,7 +114,7 @@ def home_view():
                         key="home_review_search_table",
                         column_config={
                             "logo": st.column_config.ImageColumn("로고", width="small"),
-                            "brand_name": "브랜드",
+                            "brand_name": "차명(모델명)",
                             "performance": "리뷰 내용",
                             "issues": "제목",
                         },

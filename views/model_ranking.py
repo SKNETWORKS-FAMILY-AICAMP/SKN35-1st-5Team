@@ -118,29 +118,7 @@ def model_ranking_view():
     end_idx = start_idx + items_per_page
     page_df = sorted_df.iloc[start_idx:end_idx].reset_index(drop=True)
 
-    # 카드형태 UI 커스텀 스타일
-    st.markdown(
-        """
-        <style>
-        .car-card {
-            background-color: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            transition: all 0.2s ease-in-out;
-        }
-        .car-card:hover {
-            border-color: #3b82f6;
-            box-shadow: 0 4px 6px rgba(59,130,246,0.1);
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # 10개 항목 카드 리스트 렌더링
+    # 10개 항목 리스트 렌더링 (구분선 스타일 적용)
     for idx, row in page_df.iterrows():
         global_rank = start_idx + idx + 1
         brand_name = row.get("brand_name", "")
@@ -151,7 +129,9 @@ def model_ranking_view():
         model_id = row.get("model_id")
 
         with st.container():
-            st.markdown(f"<div class='car-card'>", unsafe_allow_html=True)
+            # 카드 배경 대신 항목들 사이에 은은한 구분선 추가 (첫 번째 항목 위에는 생략 가능)
+            if idx > 0:
+                st.markdown("<hr style='margin: 15px 0; border: none; border-top: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
             
             # 레이아웃: [순위(1)] [로고/브랜드(2)] [차량사진(3)] [차량이름 및 대수(4)] [리뷰 버튼(2)]
             col_rank, col_brand, col_img, col_info, col_action = st.columns([1, 2, 3, 3, 2])
@@ -181,8 +161,6 @@ def model_ranking_view():
                         else review_df.iloc[0:0]
                     )
                     show_review_dialog(car_name, logo_url, car_image_url, matched_reviews)
-
-            st.markdown("</div>", unsafe_allow_html=True)
 
     # 하단 페이징 버튼 한번 더 제공 (편의성)
     st.markdown("<br>", unsafe_allow_html=True)

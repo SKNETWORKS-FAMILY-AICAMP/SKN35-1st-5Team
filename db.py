@@ -71,72 +71,73 @@ def init_database_tables():
     engine = get_engine()
     
     create_tables_sql = """
-        -- 자동차 등록 현황
-        CREATE TABLE IF NOT EXISTS car_registration (
-            regist_id VARCHAR(255) NOT NULL,
-            company_type VARCHAR(255),
-            company_name VARCHAR(255),
-            model_name VARCHAR(255),
-            count_car_month VARCHAR(255),
-            standard_month VARCHAR(255) NOT NULL,
-            PRIMARY KEY (regist_id)
-        );
+    -- 자동차 등록 현황
+    CREATE TABLE IF NOT EXISTS car_registration (
+        regist_id VARCHAR(255) NOT NULL,
+        company_type VARCHAR(255),
+        company_name VARCHAR(255),
+        model_name VARCHAR(255),
+        count_car_month VARCHAR(255),
+        standard_month VARCHAR(255) NOT NULL,
+        PRIMARY KEY (regist_id)
+    );
 
-        -- 브랜드 랭킹
-        CREATE TABLE IF NOT EXISTS car_brand_rank (
-            brand_id VARCHAR(255) NOT NULL,
-            regist_id VARCHAR(255) NOT NULL,
-            compare_car_month VARCHAR(255),
-            brand_standard_month VARCHAR(255) NOT NULL,
-            brand_name VARCHAR(255) NOT NULL,
-            PRIMARY KEY (brand_id, regist_id),
-            CONSTRAINT FK_car_registration_TO_car_brand_rank
-                FOREIGN KEY (regist_id)
-                REFERENCES car_registration(regist_id)
-        );
+    -- 브랜드 랭킹
+    CREATE TABLE IF NOT EXISTS car_brand_rank (
+        brand_id VARCHAR(255) NOT NULL,
+        regist_id VARCHAR(255) NOT NULL,
+        compare_car_month VARCHAR(255),
+        brand_standard_month VARCHAR(255) NOT NULL,
+        brand_name VARCHAR(255) NOT NULL,
+        PRIMARY KEY (brand_id, regist_id),
+        CONSTRAINT FK_car_registration_TO_car_brand_rank
+            FOREIGN KEY (regist_id)
+            REFERENCES car_registration(regist_id)
+    );
 
-        -- 모델 랭킹
-        CREATE TABLE IF NOT EXISTS car_model_ranking (
-            model_id VARCHAR(255) NOT NULL,
-            regist_id VARCHAR(255) NOT NULL,
-            compare_car_month VARCHAR(255),
-            standard_month VARCHAR(255) NOT NULL,
-            brand_name VARCHAR(255),
-            PRIMARY KEY (model_id, regist_id),
-            CONSTRAINT FK_car_registration_TO_car_model_ranking
-                FOREIGN KEY (regist_id)
-                REFERENCES car_registration(regist_id)
-        );
+    -- 모델 랭킹
+    CREATE TABLE IF NOT EXISTS car_model_ranking (
+        model_id VARCHAR(255) NOT NULL,
+        regist_id VARCHAR(255) NOT NULL,
+        compare_car_month VARCHAR(255),
+        standard_month VARCHAR(255) NOT NULL,
+        brand_name VARCHAR(255),
+        PRIMARY KEY (model_id, regist_id),
+        CONSTRAINT FK_car_registration_TO_car_model_ranking
+            FOREIGN KEY (regist_id)
+            REFERENCES car_registration(regist_id)
+    );
 
-        -- 리뷰 (수정된 구조)
-        CREATE TABLE IF NOT EXISTS review (
-            review_id VARCHAR(255) NOT NULL,
-            model_id VARCHAR(255) NOT NULL,
-            regist_id VARCHAR(255) NOT NULL,
-            brand_name_review VARCHAR(255),
-            PRIMARY KEY (review_id)
-        );
+    -- 리뷰
+    CREATE TABLE IF NOT EXISTS review (
+        review_id VARCHAR(255) NOT NULL,
+        model_id VARCHAR(255) NOT NULL,
+        regist_id VARCHAR(255) NOT NULL,
+        brand_name_review VARCHAR(255),
+        PRIMARY KEY (review_id)
+    );
 
-        -- 토탈 리뷰 (신규 추가된 구조)
-        CREATE TABLE IF NOT EXISTS total_review (
-            total_review_id VARCHAR(255) NOT NULL,
-            review_id2 VARCHAR(255) NOT NULL,
-            total_review_title VARCHAR(255),
-            total_review_content VARCHAR(255),
-            total_score VARCHAR(255),
-            domain_type VARCHAR(255),
-            PRIMARY KEY (total_review_id),
-            FOREIGN KEY (review_id2) REFERENCES review(review_id)
-        );
+    -- 리뷰 상세 (review와 review_id2로 조인)
+    CREATE TABLE IF NOT EXISTS total_review (
+        total_review_id VARCHAR(255) NOT NULL,
+        review_id2 VARCHAR(255) NOT NULL,
+        total_review_title VARCHAR(255),
+        total_review_content TEXT,
+        total_score VARCHAR(255),
+        domain_type VARCHAR(255),
+        PRIMARY KEY (total_review_id)
+    );
 
-        -- FAQ
-        CREATE TABLE IF NOT EXISTS faq (
-            faq_id INT AUTO_INCREMENT NOT NULL,
-            question VARCHAR(255),
-            answer TEXT, 
-            PRIMARY KEY (faq_id)
-        );
-        """
+    -- FAQ
+    CREATE TABLE IF NOT EXISTS faq (
+        faq_id INT AUTO_INCREMENT NOT NULL,
+        question VARCHAR(255),
+        answer TEXT, 
+        PRIMARY KEY (faq_id)
+    );
+
+    -- 7. QnA 테이블
+    """
 
     with engine.begin() as conn:
         for statement in create_tables_sql.strip().split(";"):

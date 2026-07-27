@@ -1,9 +1,4 @@
 import streamlit as st
-<<<<<<< Updated upstream
-from views.home import load_model_ranking_data, load_review_data, section_title, DEFAULT_CAR_IMAGE
-from views.brand_ranking import render_filter
-from dialogs import show_review_dialog  # 프로젝트 구조에 맞춰 수정
-=======
 import math
 from views.home import (
     load_model_ranking_data,
@@ -13,10 +8,8 @@ from views.home import (
 )
 from views.brand_ranking import render_filter
 from constants import CAR_IMAGE_URL_MAP, DEFAULT_CAR_IMAGE
->>>>>>> Stashed changes
 
 def model_ranking_view():
-    # 함수 내부에서 직접 데이터 로드
     model_ranking_df = load_model_ranking_data()
     review_df = load_review_data()
 
@@ -35,55 +28,9 @@ def model_ranking_view():
     target_ym, target_type = render_filter(model_ranking_df, show_type_filter=True, key_prefix="model_rank")
 
     filtered_df = model_ranking_df.copy()
-    if target_ym and "standard_ym" in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df["standard_ym"] == target_ym]
     if target_type != "전체" and "manufacturer_type" in filtered_df.columns:
         filtered_df = filtered_df[filtered_df["manufacturer_type"] == target_type]
 
-<<<<<<< Updated upstream
-    if filtered_df.empty:
-        st.info("선택한 조건에 해당하는 모델 랭킹 데이터가 없습니다.")
-        return
-
-    top10_df = filtered_df.sort_values(by="registration_count", ascending=False).head(10).reset_index(drop=True)
-
-    display_cols = ["logo", "brand_name", "car_name", "fuel_type", "registration_count", "mom_increase"]
-    existing_cols = [c for c in display_cols if c in top10_df.columns]
-
-    event = st.dataframe(
-        top10_df[existing_cols],
-        use_container_width=True,
-        hide_index=True,
-        selection_mode="single-row",
-        on_select="rerun",
-        key="model_rank_table",
-        column_config={
-            "logo": st.column_config.ImageColumn("로고", width="small"),
-            "brand_name": "브랜드",
-            "car_name": "차량이름",
-            "fuel_type": "연료",
-            "registration_count": st.column_config.NumberColumn("등록대수", format="%d 대"),
-            "mom_increase": st.column_config.NumberColumn("전월 대비", format="%+d 대"),
-        },
-    )
-
-    download_df = top10_df[existing_cols].rename(
-        columns={
-            "brand_name": "브랜드",
-            "car_name": "차량이름",
-            "fuel_type": "연료",
-            "registration_count": "등록대수",
-            "mom_increase": "전월대비 증가량",
-        }
-    ).drop(columns=["logo"], errors="ignore")
-    
-    st.download_button(
-        "모델별 Top 10 데이터 다운로드 (CSV)",
-        download_df.to_csv(index=False).encode("utf-8-sig"),
-        f"모델_Top10_{target_type}_{target_ym}.csv",
-        "text/csv",
-        use_container_width=True,
-=======
     agg_cols = {"registration_count": "sum"}
     for col in ["model_id", "logo", "car_image"]:
         if col in filtered_df.columns:
@@ -121,7 +68,6 @@ def model_ranking_view():
             "car_name": "차량이름",
             "registration_count": "등록대수"
         }
->>>>>>> Stashed changes
     )
 
     with c_btn:

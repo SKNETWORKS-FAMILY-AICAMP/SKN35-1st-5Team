@@ -9,7 +9,7 @@ import time
 from db import get_engine
 
 # 각 뷰 모듈 임포트
-from views.home import home_view
+from views.home import home_view, load_registration_data, load_model_ranking_data, load_review_data, load_faq_data, LOGO_URL_MAP
 from views.registration import registration_status_view
 from views.brand_ranking import brand_ranking_view
 from views.model_ranking import model_ranking_view
@@ -90,7 +90,7 @@ with st.sidebar:
                 "--hover-color": "rgba(59, 130, 246, 0.3)",
             },
             "nav-link-selected": {
-                "background-color": "#3b82f6",
+                "background-color": "#2189b3",
                 "color": "#ffffff",
             },
         }
@@ -98,6 +98,7 @@ with st.sidebar:
 
     st.divider()
     st.caption("SKN35_1st_Project_Group5")
+    st.caption("김경민,손채영,유지호,차윤정")
 
 # ---------------------------------------------------------
 # 라우팅

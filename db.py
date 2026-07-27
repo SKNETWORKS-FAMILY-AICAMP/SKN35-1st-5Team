@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import certifi
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import URL, create_engine, text
@@ -19,8 +20,39 @@ DB_NAME = os.getenv("DB_DATABASE", "cars_db")
 
 
 def _get_database_url() -> URL:
-    # (기존 코드 유지)
-    ...
+    """Build a safe MySQL/TiDB connection URL from environment variables."""
+    required = {
+        "DB_USERNAME": DB_USER,
+        "DB_PASSWORD": DB_PASSWORD,
+        "DB_HOST": DB_HOST,
+        "DB_PORT": DB_PORT,
+        "DB_DATABASE": DB_NAME,
+    }
+    missing = [name for name, value in required.items() if not value]
+    if missing:
+        raise RuntimeError(f"Missing database setting(s): {', '.join(missing)}")
+
+    query = {"charset": "utf8mb4"}
+    ssl_enabled = os.getenv("DB_SSL_ENABLED", "").lower()
+    is_tidb_cloud = DB_HOST.endswith("tidbcloud.com")
+    if ssl_enabled not in {"false", "0", "no"} and (ssl_enabled in {"true", "1", "yes"} or is_tidb_cloud):
+        query.update(
+            {
+                "ssl_ca": os.getenv("DB_SSL_CA", certifi.where()),
+                "ssl_verify_cert": "true",
+                "ssl_verify_identity": "true",
+            }
+        )
+
+    return URL.create(
+        "mysql+pymysql",
+        username=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=int(DB_PORT),
+        database=DB_NAME,
+        query=query,
+    )
 
 
 DATABASE_URL = _get_database_url()

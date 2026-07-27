@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
 import certifi
+import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import URL, create_engine, text
-import pandas as pd
 # constants.py에서 상수 임포트
 from sql import qna_table
 

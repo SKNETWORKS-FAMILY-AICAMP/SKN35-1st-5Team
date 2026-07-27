@@ -6,20 +6,7 @@ from views.home import (
     show_review_dialog,
 )
 from views.brand_ranking import render_filter
-
-
-def _format_mom_increase(value):
-    try:
-        value = int(value)
-    except (TypeError, ValueError):
-        return "➖ 0 대"
-
-    if value > 0:
-        return f"🟢 ▲{value:,} 대"
-    elif value < 0:
-        return f"🔴 ▼{abs(value):,} 대"
-    else:
-        return "➖ 0 대"
+from constants import CAR_IMAGE_URL_MAP, DEFAULT_CAR_IMAGE
 
 
 def model_ranking_view():
@@ -70,10 +57,9 @@ def model_ranking_view():
 
     top10_df = display_df.sort_values(by="registration_count", ascending=False).head(10).reset_index(drop=True)
 
-    if "mom_increase" in top10_df.columns:
-        top10_df["mom_increase_display"] = top10_df["mom_increase"].apply(_format_mom_increase)
+    top10_df["car_image"] = top10_df["car_name"].map(CAR_IMAGE_URL_MAP).fillna(DEFAULT_CAR_IMAGE)
 
-    display_cols = ["logo", "brand_name", "car_name", "registration_count", "mom_increase_display"]
+    display_cols = ["logo", "brand_name", "car_name", "car_image"]
     existing_cols = [c for c in display_cols if c in top10_df.columns]
 
     event = st.dataframe(
@@ -87,8 +73,7 @@ def model_ranking_view():
             "logo": st.column_config.ImageColumn("로고", width="small"),
             "brand_name": "브랜드",
             "car_name": "차량이름",
-            "registration_count": st.column_config.NumberColumn("등록대수", format="%d 대"),
-            "mom_increase_display": "전월 대비",
+            "car_image": st.column_config.ImageColumn("차량사진"),
         },
     )
 
@@ -96,10 +81,8 @@ def model_ranking_view():
         columns={
             "brand_name": "브랜드",
             "car_name": "차량이름",
-            "registration_count": "등록대수",
-            "mom_increase_display": "전월대비 증가량",
         }
-    ).drop(columns=["logo"], errors="ignore")
+    ).drop(columns=["logo", "car_image"], errors="ignore")
     
     st.download_button(
         "모델별 Top 10 데이터 다운로드 (CSV)",

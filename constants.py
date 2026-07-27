@@ -20,6 +20,7 @@ LOGO_URL_MAP = {
     "Porsche": "https://cdn.simpleicons.org/porsche",
     "Volkswagen": "https://cdn.simpleicons.org/volkswagen",
     "Land Rover": "https://autoimg.danawa.com/photo/brand/399_90.png",
+    "폴스타" : "https://file.carisyou.com/upload/2019/02/28/FILE_201902280235576730.png",
 }
 
 # 차량 이미지 URL 매핑 딕셔너리

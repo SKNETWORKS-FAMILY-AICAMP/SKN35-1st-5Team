@@ -1,77 +1,80 @@
 import streamlit as st
-from views.home import show_trend_dialog
 
-def registration_status_view(registration_df, CAR_IMAGE_URL_MAP, DEFAULT_CAR_IMAGE):
-    st.markdown(
-        """
-        <div class="hero">
-            <h1 style="margin-bottom:0.2rem;">자동차 등록 현황 조회</h1>
-            <div class="subtext">월별로 등록된 자동차 모델의 상세 현황입니다. 행을 클릭하면 해당 차량의 월별 등록 추이 그래프와 이미지가 출력됩니다.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+from components import section_title
+from dialogs import show_registration_trend_dialog
+
+
+def registration_status_view(registration_df):
+    section_title(
+        "자동차 등록 현황 조회",
+        "월별로 등록된 자동차 현황입니다. 행을 클릭하면 월별 등록 추이 그래프를 확인할 수 있습니다.",
     )
-    
+
     if registration_df.empty:
         st.warning("등록 현황 데이터가 존재하지 않습니다.")
         return
 
-    display_cols = ["logo", "manufacturer", "car_name", "registration_count", "standard_ym"]
-    view_df = registration_df[display_cols].copy()
+    # 1. 10개씩 페이징 처리
+    page_size = 10
+    total_items = len(registration_df)
+    total_pages = max((total_items + page_size - 1) // page_size, 1)
 
-    PAGE_SIZE = 10
-    total_rows = len(view_df)
-    total_pages = (total_rows + PAGE_SIZE - 1) // PAGE_SIZE if total_rows > 0 else 1
+    c_page, c_info = st.columns([3, 7])
+    with c_page:
+        page_number = st.number_input(
+            f"페이지 선택 (총 {total_pages} 페이지)",
+            min_value=1,
+            max_value=total_pages,
+            value=1,
+            step=1,
+            key="reg_page_number",
+        )
+    with c_info:
+        st.markdown(
+            f"<br><span style='color: #64748b; font-size: 0.9rem;'>총 <b>{total_items:,}</b>건 중 "
+            f"{((page_number-1)*page_size)+1} ~ {min(page_number*page_size, total_items)}번째 항목 표출</span>",
+            unsafe_allow_html=True,
+        )
 
-    if "current_page" not in st.session_state:
-        st.session_state.current_page = 1
+    start_idx = (page_number - 1) * page_size
+    end_idx = start_idx + page_size
 
-    start_idx = (st.session_state.current_page - 1) * PAGE_SIZE
-    end_idx = start_idx + PAGE_SIZE
-    page_df = view_df.iloc[start_idx:end_idx]
+    # 📌 클릭 인덱스 오작동 방지를 위한 reset_index
+    page_df = registration_df.iloc[start_idx:end_idx].copy().reset_index(drop=True)
 
+    display_cols = ["logo", "manufacturer", "car_model_type", "registration_count", "standard_ym"]
+    existing_cols = [col for col in display_cols if col in page_df.columns]
+
+    # 2. 10개 행 출력 및 클릭 이벤트 감지
     event = st.dataframe(
-        page_df,
+        page_df[existing_cols],
         use_container_width=True,
         hide_index=True,
         selection_mode="single-row",
         on_select="rerun",
-        key=f"registration_table_p{st.session_state.current_page}",
+        key="reg_status_table",
         column_config={
             "logo": st.column_config.ImageColumn("로고", width="small"),
             "manufacturer": "제조사",
-            "car_name": "차 이름",
+            "car_model_type": "차종/모델",
             "registration_count": st.column_config.NumberColumn("등록개수", format="%d 대"),
             "standard_ym": "등록 월(Month)",
-        }
+        },
     )
 
-    st.markdown("---")
-    p_col1, p_col2, p_col3 = st.columns([2, 3, 2])
-
-    with p_col1:
-        if st.button("⬅️ 이전 페이지", disabled=(st.session_state.current_page == 1)):
-            st.session_state.current_page -= 1
-            st.rerun()
-
-    with p_col2:
-        st.markdown(
-            f"<div style='text-align: center; padding-top: 5px; font-weight: bold;'>"
-            f"Page {st.session_state.current_page} of {total_pages} (총 {total_rows}건)"
-            f"</div>",
-            unsafe_allow_html=True
-        )
-
-    with p_col3:
-        if st.button("다음 페이지 ➡️", disabled=(st.session_state.current_page == total_pages)):
-            st.session_state.current_page += 1
-            st.rerun()
-
+    # 3. 행 선택 시 월별 등록 추이 그래프 팝업 출력
     selected_rows = event.selection.get("rows", [])
     if selected_rows:
         selected_idx = selected_rows[0]
-        selected_car = page_df.iloc[selected_idx]
-        car_name = selected_car["car_name"]
-        logo_url = selected_car["logo"]
-        car_image_url = CAR_IMAGE_URL_MAP.get(car_name, DEFAULT_CAR_IMAGE)
-        show_trend_dialog(car_name, logo_url, car_image_url, registration_df)
+        selected_row = page_df.iloc[selected_idx]
+
+        car_name = selected_row["car_model_type"]
+        manufacturer = selected_row["manufacturer"]
+        logo_url = selected_row.get("logo", "")
+        car_image_url = selected_row.get("car_image", "")
+
+        # 📌 전체 registration_df에서 해당 차종/모델의 월별 이력 데이터 전체를 추출
+        car_history_df = registration_df[registration_df["car_model_type"] == car_name]
+
+        # 팝업 호출
+        show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_url, car_history_df)

@@ -114,6 +114,27 @@ def show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_u
     st.plotly_chart(fig, use_container_width=True)
 
 
+def _render_star_rating(score, max_score=5.0):
+    """0.5점 단위 실수 평점을 별 아이콘 바(HTML)로 변환합니다."""
+    try:
+        score = float(score)
+    except (TypeError, ValueError):
+        return ""
+
+    score = max(0.0, min(max_score, score))
+    percent = (score / max_score) * 100
+
+    return f"""
+    <div style="display: flex; align-items: center; gap: 6px; margin: 4px 0 10px 0;">
+        <div style="position: relative; display: inline-block; font-size: 1.15rem; line-height: 1; letter-spacing: 2px;">
+            <div style="color: #d1d5db;">★★★★★</div>
+            <div style="position: absolute; top: 0; left: 0; width: {percent}%; overflow: hidden; white-space: nowrap; color: #f59e0b;">★★★★★</div>
+        </div>
+        <span style="font-weight: bold; color: #4b5563;">{score:.1f} / {max_score:.1f}</span>
+    </div>
+    """
+
+
 @st.dialog("📝 차량 상세 리뷰", width="large")
 def show_review_dialog(car_name, logo_url, car_image_url, matched_reviews):
     c_logo, c_title, c_img = st.columns([1, 4, 3])
@@ -138,16 +159,17 @@ def show_review_dialog(car_name, logo_url, car_image_url, matched_reviews):
         for idx, row in matched_reviews.reset_index(drop=True).iterrows():
             st.markdown(f"**리뷰 #{idx + 1}**")
 
+            star_html = _render_star_rating(row.get("overall_rating"))
+            if star_html:
+                st.markdown(star_html, unsafe_allow_html=True)
+
             performance = row.get("performance", "-")
-            price = row.get("price", "-")
             issues = row.get("issues", "-")
 
-            c1, c2, c3 = st.columns(3)
+            c1, c2 = st.columns(2)
             with c1:
                 st.info(f"**🚀 리뷰 내용**\n\n{performance}")
             with c2:
-                st.success(f"**💰 도메인 유형**\n\n{price}")
-            with c3:
                 st.warning(f"**⚠️ 제목**\n\n{issues}")
 
             if idx < len(matched_reviews) - 1:

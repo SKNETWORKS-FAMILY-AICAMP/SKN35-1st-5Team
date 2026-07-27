@@ -96,11 +96,12 @@ def load_review_data():
            t.domain_type AS price,
            t.total_review_title AS issues
     FROM review r
-    LEFT JOIN total_review t ON r.review_id = t.review_id2
+    LEFT JOIN total_review t ON r.review_id = t.review_id2 AND t.domain_type = '1'
     """
     df = pd.read_sql(query, con=engine)
     if not df.empty:
         df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
+        df["overall_rating"] = pd.to_numeric(df["overall_rating"], errors="coerce")
     return df
 
 

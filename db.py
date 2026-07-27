@@ -113,12 +113,19 @@ def init_database_tables():
         review_id VARCHAR(255) NOT NULL,
         model_id VARCHAR(255) NOT NULL,
         regist_id VARCHAR(255) NOT NULL,
-        total_review VARCHAR(255),
-        performance_review VARCHAR(255),
-        price_review VARCHAR(255),
-        problem_review VARCHAR(255),
         brand_name_review VARCHAR(255),
         PRIMARY KEY (review_id)
+    );
+
+    -- 리뷰 상세 (review와 review_id2로 조인)
+    CREATE TABLE IF NOT EXISTS total_review (
+        total_review_id VARCHAR(255) NOT NULL,
+        review_id2 VARCHAR(255) NOT NULL,
+        total_review_title VARCHAR(255),
+        total_review_content TEXT,
+        total_score VARCHAR(255),
+        domain_type VARCHAR(255),
+        PRIMARY KEY (total_review_id)
     );
 
     -- FAQ

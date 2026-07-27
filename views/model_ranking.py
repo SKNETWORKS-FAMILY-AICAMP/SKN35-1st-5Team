@@ -1,7 +1,6 @@
 import streamlit as st
-from views.home import load_model_ranking_data, load_review_data, section_title, DEFAULT_CAR_IMAGE
-from views.brand_ranking import render_filter
-from dialogs import show_review_dialog  # 프로젝트 구조에 맞춰 수정
+from components import section_title, render_filter
+from dialogs import show_review_dialog
 
 
 def _format_mom_increase(value):

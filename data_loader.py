@@ -83,18 +83,19 @@ def load_model_ranking_data():
 
 @st.cache_data(ttl=3600)
 def load_review_data():
-    """4. review 테이블 데이터 로드"""
+    """4. review 및 total_review 테이블 조인 데이터 로드"""
     engine = get_engine()
     query = """
-    SELECT review_id, 
-           model_id, 
-           regist_id, 
-           total_review AS overall_rating, 
-           performance_review AS performance, 
-           price_review AS price, 
-           problem_review AS issues, 
-           brand_name_review AS brand_name
-    FROM review
+    SELECT r.review_id,
+           r.model_id,
+           r.regist_id,
+           r.brand_name_review AS brand_name,
+           t.total_score AS overall_rating,
+           t.total_review_content AS performance,
+           t.domain_type AS price,
+           t.total_review_title AS issues
+    FROM review r
+    LEFT JOIN total_review t ON r.review_id = t.review_id2
     """
     df = pd.read_sql(query, con=engine)
     if not df.empty:

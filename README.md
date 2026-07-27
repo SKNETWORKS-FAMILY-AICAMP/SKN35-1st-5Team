@@ -11,9 +11,7 @@ project_root/
     ├── registration.py     # 자동차 등록 현황
     ├── brand_ranking.py    # 브랜드별 랭킹
     ├── model_ranking.py    # 모델별 랭킹
-    ├── faq.py              # FAQ
-    ├── ev_station.py       # 전기차 충전소
-    └── ev_price.py         # 전기차 보조금
+    └── faq.py              # FAQ
 ```
 
 ## 🗄️ ERD

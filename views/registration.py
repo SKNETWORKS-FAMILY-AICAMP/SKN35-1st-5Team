@@ -1,89 +1,77 @@
-import pandas as pd
 import streamlit as st
-from db import get_engine
+from views.home import show_trend_dialog
 
-engine = get_engine()
-
-logo_url_map = {
-    "현대": "https://cdn.simpleicons.org/hyundai",
-    "기아": "https://cdn.simpleicons.org/kia",
-    "제네시스": "https://autoimg.danawa.com/photo/brand/304_90.png",
-    "르노코리아": "https://cdn.simpleicons.org/renault",
-    "BMW": "https://cdn.simpleicons.org/bmw",
-    "Mercedes-Benz": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
-    "Tesla": "https://cdn.simpleicons.org/tesla",
-    "Audi": "https://cdn.simpleicons.org/audi",
-    "Volvo": "https://cdn.simpleicons.org/volvo",
-    "Lexus": "https://autoimg.danawa.com/photo/brand/486_90.png",
-    "Mini": "https://cdn.simpleicons.org/mini",
-    "Porsche": "https://cdn.simpleicons.org/porsche",
-    "Volkswagen": "https://cdn.simpleicons.org/volkswagen",
-    "Land Rover": "https://autoimg.danawa.com/photo/brand/399_90.png"
-}
-
-@st.cache_data
-def load_registration_data():
-    try:
-        return pd.read_sql("SELECT * FROM car_registration_table", con=engine)
-    except Exception:
-        return pd.DataFrame(columns=["기준연월", "제조사구분", "제조사", "시도", "차종", "연료", "등록대수"])
-
-def render():
+def registration_status_view(registration_df, CAR_IMAGE_URL_MAP, DEFAULT_CAR_IMAGE):
     st.markdown(
         """
-        <div style="padding: 1.2rem 1.3rem; border-radius: 18px; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 55%, #f8fafc 100%); border: 1px solid #dbeafe; margin-bottom: 1rem;">
+        <div class="hero">
             <h1 style="margin-bottom:0.2rem;">자동차 등록 현황 조회</h1>
-            <div style="font-size: 0.95rem; color: #475569;">수입차 및 국산차 구분, 지역, 연료별 자동차 등록 통계 데이터를 상세히 필터링하고 확인합니다.</div>
+            <div class="subtext">월별로 등록된 자동차 모델의 상세 현황입니다. 행을 클릭하면 해당 차량의 월별 등록 추이 그래프와 이미지가 출력됩니다.</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
     
-    registration_df = load_registration_data()
-
     if registration_df.empty:
-        st.warning("연동된 데이터베이스에 등록 현황 데이터가 존재하지 않습니다.")
+        st.warning("등록 현황 데이터가 존재하지 않습니다.")
         return
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        selected_maker_type = st.selectbox("제조사 구분 (국산/수입)", ["전체", "국산차", "수입차"])
-    with c2:
-        selected_region = st.selectbox("시도 필터", ["전체"] + sorted(registration_df["시도"].unique().tolist()))
-    with c3:
-        selected_fuel = st.selectbox("연료 필터", ["전체"] + sorted(registration_df["연료"].unique().tolist()))
+    display_cols = ["logo", "manufacturer", "car_name", "registration_count", "standard_ym"]
+    view_df = registration_df[display_cols].copy()
 
-    filtered_reg = registration_df.copy()
-    if selected_maker_type != "전체":
-        filtered_reg = filtered_reg[filtered_reg["제조사구분"] == selected_maker_type]
-    if selected_region != "전체":
-        filtered_reg = filtered_reg[filtered_reg["시도"] == selected_region]
-    if selected_fuel != "전체":
-        filtered_reg = filtered_reg[filtered_reg["연료"] == selected_fuel]
+    PAGE_SIZE = 10
+    total_rows = len(view_df)
+    total_pages = (total_rows + PAGE_SIZE - 1) // PAGE_SIZE if total_rows > 0 else 1
 
-    display_reg = filtered_reg.copy()
-    display_reg["브랜드 로고"] = display_reg["제조사"].map(logo_url_map)
-    
-    cols = ["기준연월", "제조사구분", "브랜드 로고", "제조사", "시도", "차종", "연료", "등록대수"]
-    display_reg = display_reg[[c for c in cols if c in display_reg.columns]]
+    if "current_page" not in st.session_state:
+        st.session_state.current_page = 1
 
-    st.markdown(f"### 📋 필터링된 등록 현황 목록 (총 {len(display_reg)}건)")
-    
-    st.dataframe(
-        display_reg,
-        column_config={
-            "브랜드 로고": st.column_config.ImageColumn("브랜드 로고", width="small")
-        },
+    start_idx = (st.session_state.current_page - 1) * PAGE_SIZE
+    end_idx = start_idx + PAGE_SIZE
+    page_df = view_df.iloc[start_idx:end_idx]
+
+    event = st.dataframe(
+        page_df,
         use_container_width=True,
         hide_index=True,
+        selection_mode="single-row",
+        on_select="rerun",
+        key=f"registration_table_p{st.session_state.current_page}",
+        column_config={
+            "logo": st.column_config.ImageColumn("로고", width="small"),
+            "manufacturer": "제조사",
+            "car_name": "차 이름",
+            "registration_count": st.column_config.NumberColumn("등록개수", format="%d 대"),
+            "standard_ym": "등록 월(Month)",
+        }
     )
 
-    if not display_reg.empty:
-        download_df = display_reg.drop(columns=["브랜드 로고"])
-        st.download_button(
-            "등록 현황 데이터 다운로드 (CSV)",
-            download_df.to_csv(index=False).encode("utf-8-sig"),
-            "자동차_등록_현황.csv",
-            "text/csv",
-            use_container_width=True,
+    st.markdown("---")
+    p_col1, p_col2, p_col3 = st.columns([2, 3, 2])
+
+    with p_col1:
+        if st.button("⬅️ 이전 페이지", disabled=(st.session_state.current_page == 1)):
+            st.session_state.current_page -= 1
+            st.rerun()
+
+    with p_col2:
+        st.markdown(
+            f"<div style='text-align: center; padding-top: 5px; font-weight: bold;'>"
+            f"Page {st.session_state.current_page} of {total_pages} (총 {total_rows}건)"
+            f"</div>",
+            unsafe_allow_html=True
         )
+
+    with p_col3:
+        if st.button("다음 페이지 ➡️", disabled=(st.session_state.current_page == total_pages)):
+            st.session_state.current_page += 1
+            st.rerun()
+
+    selected_rows = event.selection.get("rows", [])
+    if selected_rows:
+        selected_idx = selected_rows[0]
+        selected_car = page_df.iloc[selected_idx]
+        car_name = selected_car["car_name"]
+        logo_url = selected_car["logo"]
+        car_image_url = CAR_IMAGE_URL_MAP.get(car_name, DEFAULT_CAR_IMAGE)
+        show_trend_dialog(car_name, logo_url, car_image_url, registration_df)

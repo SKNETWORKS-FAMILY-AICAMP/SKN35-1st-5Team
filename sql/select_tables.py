@@ -46,7 +46,7 @@ SELECT r.review_id,
        t.domain_type AS price,
        t.total_review_title AS issues
 FROM review r
-LEFT JOIN total_review t ON r.review_id = t.review_id2
+LEFT JOIN total_review t ON r.review_id = t.review_id2 AND t.domain_type = '1'
 """
 
 # 5. FAQ 조회 쿼리

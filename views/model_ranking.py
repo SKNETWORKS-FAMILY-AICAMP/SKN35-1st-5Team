@@ -92,6 +92,7 @@ def model_ranking_view(model_ranking_df, review_df):
             "mom_increase_display": "전월대비 증가량",
         }
     ).drop(columns=["logo"], errors="ignore")
+    
     st.download_button(
         "모델별 Top 10 데이터 다운로드 (CSV)",
         download_df.to_csv(index=False).encode("utf-8-sig"),

@@ -1,22 +1,21 @@
+
+import os
 import streamlit as st
 from streamlit_option_menu import option_menu
+import random
+import time
 
-from data_loader import (
-    load_registration_data,
-    load_brand_ranking_data,
-    load_model_ranking_data,
-    load_review_data,
-    load_faq_data,
-)
-from views.home import home_view
+# db.py에서 SQLAlchemy 엔진 가져오기
+from db import get_engine
+
+# 각 뷰 모듈 임포트
+from views.home import home_view, load_registration_data, load_model_ranking_data, load_review_data, load_faq_data, LOGO_URL_MAP
 from views.registration import registration_status_view
 from views.brand_ranking import brand_ranking_view
 from views.model_ranking import model_ranking_view
 from views.faq import faq_view
 
-# ---------------------------------------------------------
-# Page Config
-# ---------------------------------------------------------
+# Page Config Configuration
 st.set_page_config(
     page_title="자동차 등록 현황 통합 시스템",
     page_icon="🚗",
@@ -24,9 +23,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ---------------------------------------------------------
 # Custom Styling (CSS)
-# ---------------------------------------------------------
 st.markdown(
     """
     <style>
@@ -57,15 +54,6 @@ st.markdown(
 )
 
 # ---------------------------------------------------------
-# 데이터 로드
-# ---------------------------------------------------------
-registration_df = load_registration_data()
-brand_ranking_df = load_brand_ranking_data()
-model_ranking_df = load_model_ranking_data()
-review_df = load_review_data()
-faq_df = load_faq_data()
-
-# ---------------------------------------------------------
 # 사이드바 메뉴 구성
 # ---------------------------------------------------------
 with st.sidebar:
@@ -83,10 +71,10 @@ with st.sidebar:
             "FAQ",
         ],
         icons=[
-            "house",
-            "clipboard-data",
-            "trophy",
-            "car-front",
+            "house", 
+            "clipboard-data", 
+            "trophy", 
+            "car-front", 
             "question-circle",
         ],
         default_index=0,
@@ -105,22 +93,22 @@ with st.sidebar:
                 "background-color": "#3b82f6",
                 "color": "#ffffff",
             },
-        },
+        }
     )
 
     st.divider()
     st.caption("SKN35_1st_Project_Group5")
 
 # ---------------------------------------------------------
-# Tab Routing
+# 라우팅
 # ---------------------------------------------------------
 if active_tab == "Home":
-    home_view(registration_df, faq_df, review_df, model_ranking_df)
+    home_view()
 elif active_tab == "자동차 등록 현황":
-    registration_status_view(registration_df)
+    registration_status_view()
 elif active_tab == "브랜드별 랭킹":
-    brand_ranking_view(brand_ranking_df, registration_df)
+    brand_ranking_view()
 elif active_tab == "모델별 랭킹":
-    model_ranking_view(model_ranking_df, review_df)
+    model_ranking_view()
 elif active_tab == "FAQ":
-    faq_view(faq_df)
+    faq_view()

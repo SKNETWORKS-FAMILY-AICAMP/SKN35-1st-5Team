@@ -11,6 +11,16 @@ from sql import select_tables
 # ---------------------------------------------------------
 
 
+def _resolve_brand_logo(brand_text):
+    """review.brand_name은 '테슬라 모델 3'처럼 브랜드+모델명이 섞여 있어
+    정확히 일치하는 키가 없으므로, 텍스트에 포함된 브랜드명을 찾아 로고를 매칭한다."""
+    text_value = str(brand_text) if brand_text else ""
+    for brand, logo_url in LOGO_URL_MAP.items():
+        if brand in text_value:
+            return logo_url
+    return DEFAULT_LOGO
+
+
 @st.cache_data(ttl=3600)
 def load_registration_data():
     """1. car_registration 테이블 데이터 로드"""
@@ -58,7 +68,8 @@ def load_review_data():
     engine = get_engine()
     df = pd.read_sql(select_tables.SELECT_REVIEW_QUERY, con=engine)
     if not df.empty:
-        df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
+        df["logo"] = df["brand_name"].apply(_resolve_brand_logo)
+        df["overall_rating"] = pd.to_numeric(df["overall_rating"], errors="coerce")
     return df
 
 

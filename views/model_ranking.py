@@ -1,10 +1,13 @@
 import streamlit as st
+from views.home import load_model_ranking_data, load_review_data, section_title, DEFAULT_CAR_IMAGE
+from views.brand_ranking import render_filter
+from dialogs import show_review_dialog  # 프로젝트 구조에 맞춰 수정
 
-from components import section_title, render_filter
-from dialogs import show_review_dialog
+def model_ranking_view():
+    # 함수 내부에서 직접 데이터 로드
+    model_ranking_df = load_model_ranking_data()
+    review_df = load_review_data()
 
-
-def model_ranking_view(model_ranking_df, review_df):
     section_title(
         "모델별 랭킹 순위",
         "기준 연월과 국산/수입 구분을 선택하면 등록대수 기준 상위 10개 모델을 조회합니다.",
@@ -57,6 +60,7 @@ def model_ranking_view(model_ranking_df, review_df):
             "mom_increase": "전월대비 증가량",
         }
     ).drop(columns=["logo"], errors="ignore")
+    
     st.download_button(
         "모델별 Top 10 데이터 다운로드 (CSV)",
         download_df.to_csv(index=False).encode("utf-8-sig"),

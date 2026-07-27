@@ -113,7 +113,7 @@ def show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_u
     # Streamlit 화면에 그래프 출력
     st.plotly_chart(fig, use_container_width=True)
 
-
+    
 def _render_star_rating(score, max_score=5.0):
     """0.5점 단위 실수 평점을 별 아이콘 바(HTML)로 변환합니다."""
     try:
@@ -166,16 +166,15 @@ def show_review_dialog(car_name, logo_url, car_image_url, matched_reviews):
             performance = row.get("performance", "-")
             issues = row.get("issues", "-")
 
-            c1, c2 = st.columns(2)
-            with c1:
-                st.info(f"**🚀 리뷰 내용**\n\n{performance}")
-            with c2:
-                st.warning(f"**⚠️ 제목**\n\n{issues}")
+            # --- 상하 구조로 변경 (제목 -> 내용 순서) ---
+            st.warning(f"**⚠️ 제목**\n\n{issues}")
+            st.info(f"**🚀 리뷰 내용**\n\n{performance}")
+            # ---------------------------------------------
 
             if idx < len(matched_reviews) - 1:
                 st.markdown("<hr style='margin: 12px 0; border: 0.5px solid #e2e8f0;'>", unsafe_allow_html=True)
 
-
+                
 @st.dialog("📊 브랜드 분석 및 모델별 순위", width="large")
 def show_brand_trend_dialog(brand_name, logo_url, brand_history_df):
     # 상단 브랜드 정보 표시

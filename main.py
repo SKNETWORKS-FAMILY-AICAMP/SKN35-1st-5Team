@@ -1,6 +1,3 @@
-<<<<<<< Updated upstream
-=======
-
 import os
 from pathlib import Path
 import pandas as pd
@@ -45,6 +42,7 @@ LOGO_URL_MAP = {
     "Volkswagen": "https://cdn.simpleicons.org/volkswagen",
     "Land Rover": "https://autoimg.danawa.com/photo/brand/399_90.png",
     "폴스타" : "https://file.carisyou.com/upload/2019/02/28/FILE_201902280235576730.png",
+
 }
 
 # 차량 이미지 URL 매핑 딕셔너리
@@ -147,7 +145,7 @@ def load_registration_data():
 def load_brand_ranking_data():
     """2. car_brand_rank 및 car_registration 기반 브랜드별 합산 랭킹 데이터 로드"""
     engine = get_engine()
-
+    
     # 브랜드(brand_name) 및 기준월(standard_ym) 기준으로 그룹화하여 합산
     query = """
     SELECT 
@@ -161,17 +159,17 @@ def load_brand_ranking_data():
     ORDER BY b.brand_standard_month DESC, registration_count DESC
     """
     df = pd.read_sql(query, con=engine)
-
+    
     if not df.empty:
         # 수치형 변환
         df["registration_count"] = pd.to_numeric(df["registration_count"], errors="coerce").fillna(0).astype(int)
-
+        
         df["standard_ym_dt"] = pd.to_datetime(df["standard_ym"], format="%Y-%m")
         df = df.sort_values(by=["brand_name", "standard_ym_dt"])     
         df["prev_count"] = df.groupby("brand_name")["registration_count"].shift(1)
-
+        
         df["real_mom"] = (df["registration_count"] - df["prev_count"]).fillna(0).astype(int)
-
+        
         df = df.sort_values(by=["standard_ym", "registration_count"], ascending=[False, False])
         df.drop(columns=["standard_ym_dt", "prev_count"], inplace=True)
 
@@ -185,10 +183,9 @@ def load_brand_ranking_data():
 
         df["mom_display"] = df["real_mom"].apply(format_mom_display)
         df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
-
+        
     return df
-
-
+  
 @st.cache_data(ttl=3600)
 def load_model_ranking_data():
     """3. car_model_ranking 테이블 데이터 로드 (테이블명: car_model_ranking)"""
@@ -310,9 +307,9 @@ def section_title(title, caption):
 def render_filter(df, show_type_filter=False, key_prefix="filter"):
     if df.empty or "standard_ym" not in df.columns:
         return None, None
-
+    
     available_yms = sorted(df["standard_ym"].dropna().unique(), reverse=True)
-
+    
     years = ["전체"] + sorted(list(set([ym.split("-")[0] for ym in available_yms if "-" in ym])), reverse=True)
 
     if show_type_filter:
@@ -322,12 +319,12 @@ def render_filter(df, show_type_filter=False, key_prefix="filter"):
 
     with c1:
         selected_year = st.selectbox("📅 연도 선택", years, key=f"{key_prefix}_year")
-
+    
     if selected_year == "전체":
         months = ["전체"] + sorted(list(set([ym.split("-")[1] for ym in available_yms if "-" in ym])), reverse=True)
     else:
         months = ["전체"] + sorted(list(set([ym.split("-")[1] for ym in available_yms if ym.startswith(selected_year)])), reverse=True)
-
+        
     with c2:
         selected_month = st.selectbox("📆 월 선택", months, key=f"{key_prefix}_month")
 
@@ -339,13 +336,14 @@ def render_filter(df, show_type_filter=False, key_prefix="filter"):
         selected_target_ym = f"{selected_year}-"
     else:
         selected_target_ym = f"{selected_year}-{selected_month}"
-
+    
     selected_type = "전체"
     if show_type_filter:
         with c3:
             selected_type = st.selectbox("🚘 구분 선택", ["전체", "국산", "수입"], key=f"{key_prefix}_type")
 
     return selected_target_ym, selected_type
+  
 # --- 📌 월별 등록 추이 + 이미지 출력 팝업 (Dialog) ---
 @st.dialog("📈 월별 등록 추이 분석", width="large")
 def show_trend_dialog(car_name, logo_url, car_image_url, full_df):
@@ -694,15 +692,15 @@ def registration_status_view():
 
 def brand_ranking_view():
     section_title("브랜드별 랭킹", "월별 및 누적 브랜드 등록 순위 현황입니다. 행을 클릭하면 해당 브랜드의 월별 등록 추이를 확인할 수 있습니다.")
-
+    
     target_df = brand_ranking_df
-
+    
     if target_df.empty:
         st.warning("브랜드 랭킹 데이터가 존재하지 않습니다.")
         return
 
     target_ym, target_type = render_filter(target_df, show_type_filter=True, key_prefix="brand_rank")
-
+    
     filtered_df = target_df.copy()
 
     # 구분 필터(국산/수입) 먼저 적용
@@ -719,7 +717,7 @@ def brand_ranking_view():
         )
         display_df["standard_ym"] = "전체 기간"
         display_df["mom_display"] = "➖ 0 대"  # 전체 기간 누적이므로 비교군 없음
-
+        
     elif target_ym and (target_ym.endswith("-") or target_ym.startswith("-")):
         # 2. 특정 연도 전체 (예: '2026-') 또는 특정 월 전체 (예: '-05') 선택 시: 해당 기간 누적 합산
         if target_ym.endswith("-"):
@@ -738,7 +736,7 @@ def brand_ranking_view():
         )
         display_df["standard_ym"] = period_label
         display_df["mom_display"] = "➖ 0 대"
-
+        
     else:
         # 3. 특정 연-월 (예: '2026-05')이 명확히 지정된 경우: 기존 월별 증감(MoM) 데이터 그대로 표출
         display_df = filtered_df[filtered_df["standard_ym"] == target_ym].copy()
@@ -774,13 +772,14 @@ def brand_ranking_view():
     if selected_rows:
         selected_idx = selected_rows[0]
         selected_data = display_df.iloc[selected_idx]
-
+        
         brand_name = selected_data.get("brand_name", "브랜드")
         logo_url = selected_data.get("logo", "")
-
+        
         # 선택된 브랜드의 전체 월별 히스토리 추출
         brand_history_df = target_df[target_df["brand_name"] == brand_name].copy()
         show_registration_trend_dialog(brand_name, "브랜드 종합", logo_url, "", brand_history_df)
+        
 def model_ranking_view():
     section_title("모델별 랭킹", "월별 차량 모델별 등록순위 현황입니다. 클릭 시 리뷰를 확인할 수 있습니다.")
 
@@ -864,4 +863,3 @@ elif active_tab == "모델별 랭킹":
     model_ranking_view()
 elif active_tab == "FAQ":
     faq_view()
->>>>>>> Stashed changes

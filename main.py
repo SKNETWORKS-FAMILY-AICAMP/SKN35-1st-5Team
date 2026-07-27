@@ -1,3 +1,4 @@
+
 import os
 from pathlib import Path
 import pandas as pd
@@ -42,7 +43,6 @@ LOGO_URL_MAP = {
     "Volkswagen": "https://cdn.simpleicons.org/volkswagen",
     "Land Rover": "https://autoimg.danawa.com/photo/brand/399_90.png",
     "폴스타" : "https://file.carisyou.com/upload/2019/02/28/FILE_201902280235576730.png",
-
 }
 
 # 차량 이미지 URL 매핑 딕셔너리
@@ -118,7 +118,7 @@ st.markdown(
 )
 
 # ---------------------------------------------------------
-# DB 데이터 로드 함수 (실제 DB 컬럼명 적용)
+# DB 데이터 로드 함수 (수정된 리뷰 테이블 스키마 반영)
 # ---------------------------------------------------------
 
 @st.cache_data(ttl=3600)
@@ -145,8 +145,7 @@ def load_registration_data():
 def load_brand_ranking_data():
     """2. car_brand_rank 및 car_registration 기반 브랜드별 합산 랭킹 데이터 로드"""
     engine = get_engine()
-    
-    # 브랜드(brand_name) 및 기준월(standard_ym) 기준으로 그룹화하여 합산
+
     query = """
     SELECT 
         b.brand_name, 
@@ -159,17 +158,13 @@ def load_brand_ranking_data():
     ORDER BY b.brand_standard_month DESC, registration_count DESC
     """
     df = pd.read_sql(query, con=engine)
-    
+
     if not df.empty:
-        # 수치형 변환
         df["registration_count"] = pd.to_numeric(df["registration_count"], errors="coerce").fillna(0).astype(int)
-        
         df["standard_ym_dt"] = pd.to_datetime(df["standard_ym"], format="%Y-%m")
         df = df.sort_values(by=["brand_name", "standard_ym_dt"])     
         df["prev_count"] = df.groupby("brand_name")["registration_count"].shift(1)
-        
         df["real_mom"] = (df["registration_count"] - df["prev_count"]).fillna(0).astype(int)
-        
         df = df.sort_values(by=["standard_ym", "registration_count"], ascending=[False, False])
         df.drop(columns=["standard_ym_dt", "prev_count"], inplace=True)
 
@@ -183,12 +178,13 @@ def load_brand_ranking_data():
 
         df["mom_display"] = df["real_mom"].apply(format_mom_display)
         df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
-        
+
     return df
-  
+
+
 @st.cache_data(ttl=3600)
 def load_model_ranking_data():
-    """3. car_model_ranking 테이블 데이터 로드 (테이블명: car_model_ranking)"""
+    """3. car_model_ranking 테이블 데이터 로드"""
     engine = get_engine()
     query = """
     SELECT m.model_id, 
@@ -199,7 +195,7 @@ def load_model_ranking_data():
            r.model_name AS car_name,
            r.count_car_month AS registration_count,
            r.company_type AS manufacturer_type,
-           '휘발유/디젤/전기' AS fuel_type  -- 기본 표시용
+           '휘발유/디젤/전기' AS fuel_type
     FROM car_model_ranking m
     LEFT JOIN car_registration r ON m.regist_id = r.regist_id
     ORDER BY m.standard_month DESC
@@ -214,18 +210,19 @@ def load_model_ranking_data():
 
 @st.cache_data(ttl=3600)
 def load_review_data():
-    """4. review 테이블 데이터 로드"""
+    """4. review 및 total_review 테이블 데이터 조인 로드"""
     engine = get_engine()
     query = """
-    SELECT review_id, 
-           model_id, 
-           regist_id, 
-           total_review AS overall_rating, 
-           performance_review AS performance, 
-           price_review AS price, 
-           problem_review AS issues, 
-           brand_name_review AS brand_name
-    FROM review
+    SELECT r.review_id, 
+           r.model_id, 
+           r.regist_id, 
+           r.brand_name_review AS brand_name,
+           t.total_score AS overall_rating, 
+           t.total_review_content AS performance, 
+           t.domain_type AS price, 
+           t.total_review_title AS issues
+    FROM review r
+    LEFT JOIN total_review t ON r.review_id = t.review_id2
     """
     df = pd.read_sql(query, con=engine)
     if not df.empty:
@@ -307,9 +304,8 @@ def section_title(title, caption):
 def render_filter(df, show_type_filter=False, key_prefix="filter"):
     if df.empty or "standard_ym" not in df.columns:
         return None, None
-    
+
     available_yms = sorted(df["standard_ym"].dropna().unique(), reverse=True)
-    
     years = ["전체"] + sorted(list(set([ym.split("-")[0] for ym in available_yms if "-" in ym])), reverse=True)
 
     if show_type_filter:
@@ -319,31 +315,31 @@ def render_filter(df, show_type_filter=False, key_prefix="filter"):
 
     with c1:
         selected_year = st.selectbox("📅 연도 선택", years, key=f"{key_prefix}_year")
-    
+
     if selected_year == "전체":
         months = ["전체"] + sorted(list(set([ym.split("-")[1] for ym in available_yms if "-" in ym])), reverse=True)
     else:
         months = ["전체"] + sorted(list(set([ym.split("-")[1] for ym in available_yms if ym.startswith(selected_year)])), reverse=True)
-        
+
     with c2:
         selected_month = st.selectbox("📆 월 선택", months, key=f"{key_prefix}_month")
 
     if selected_year == "전체" and selected_month == "전체":
-        selected_target_ym = "ALL"  # 전체 기간 합산 처리용 플래그
+        selected_target_ym = "ALL"
     elif selected_year == "전체":
         selected_target_ym = f"-{selected_month}"
     elif selected_month == "전체":
         selected_target_ym = f"{selected_year}-"
     else:
         selected_target_ym = f"{selected_year}-{selected_month}"
-    
+
     selected_type = "전체"
     if show_type_filter:
         with c3:
             selected_type = st.selectbox("🚘 구분 선택", ["전체", "국산", "수입"], key=f"{key_prefix}_type")
 
     return selected_target_ym, selected_type
-  
+
 # --- 📌 월별 등록 추이 + 이미지 출력 팝업 (Dialog) ---
 @st.dialog("📈 월별 등록 추이 분석", width="large")
 def show_trend_dialog(car_name, logo_url, car_image_url, full_df):
@@ -414,14 +410,134 @@ def show_review_dialog(car_name, logo_url, car_image_url, matched_reviews):
 
             c1, c2, c3 = st.columns(3)
             with c1:
-                st.info(f"**🚀 주행/성능**\n\n{performance}")
+                st.info(f"**🚀 리뷰 내용**\n\n{performance}")
             with c2:
-                st.success(f"**💰 가격/가성비**\n\n{price}")
+                st.success(f"**💰 도메인 유형**\n\n{price}")
             with c3:
-                st.warning(f"**⚠️ 단점/아쉬운 점**\n\n{issues}")
+                st.warning(f"**⚠️ 제목**\n\n{issues}")
 
             if idx < len(matched_reviews) - 1:
                 st.markdown("<hr style='margin: 12px 0; border: 0.5px solid #e2e8f0;'>", unsafe_allow_html=True)
+
+@st.dialog("📊 월별 등록 대수 추이 분석", width="large")
+def show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_url, car_history_df):
+    c_logo, c_title, c_img = st.columns([1, 4, 3])
+
+    with c_logo:
+        if logo_url:
+            st.image(logo_url, width=45)
+
+    with c_title:
+        st.markdown(f"### **[{manufacturer}] {car_name}**")
+        st.caption("월별 신규 등록 대수 변화 추이")
+
+    with c_img:
+        if car_image_url:
+            st.image(car_image_url, width=150)
+
+    st.divider()
+
+    if car_history_df.empty:
+        st.info(f"'{car_name}' 모델에 대한 월별 등록 추이 데이터가 없습니다.")
+        return
+
+    trend_df = car_history_df.sort_values(by="standard_ym", ascending=True).copy()
+
+    total_count = trend_df["registration_count"].sum()
+    avg_count = int(trend_df["registration_count"].mean())
+    latest_count = trend_df.iloc[-1]["registration_count"]
+    latest_month = trend_df.iloc[-1]["standard_ym"]
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric("총 누적 등록 대수", f"{total_count:,} 대")
+    m2.metric("월평균 등록 대수", f"{avg_count:,} 대")
+    m3.metric(f"최근 등록 ({latest_month})", f"{latest_count:,} 대")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    fig = px.line(
+        trend_df,
+        x="standard_ym",
+        y="registration_count",
+        markers=True,
+        title=f"📈 {car_name} 월별 등록 대수 추이",
+        labels={"standard_ym": "등록 월", "registration_count": "등록 대수(대)"},
+        text="registration_count"
+    )
+
+    fig.update_traces(
+        line=dict(color="#2563eb", width=3),
+        marker=dict(size=8, color="#1e40af"),
+        textposition="top center",
+        texttemplate="%{text:,.0f}대"
+    )
+
+    fig.update_layout(
+        xaxis_type="category",
+        hovermode="x unified",
+        margin=dict(l=20, r=20, t=50, b=20),
+        height=380
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+@st.dialog("📊 브랜드 월별 등록 추이 분석", width="large")
+def show_brand_trend_dialog(brand_name, logo_url, brand_history_df):
+    c_logo, c_title = st.columns([1, 6])
+    with c_logo:
+        if logo_url:
+            st.image(logo_url, width=45)
+    with c_title:
+        st.markdown(f"### **{brand_name}**")
+        st.caption("브랜드 전체 월별 등록 대수 추이")
+
+    st.divider()
+
+    if brand_history_df.empty:
+        st.info(f"'{brand_name}' 브랜드의 등록 추이 데이터가 없습니다.")
+        return
+
+    trend_df = (
+        brand_history_df.groupby("standard_ym", as_index=False)["registration_count"]
+        .sum()
+        .sort_values(by="standard_ym", ascending=True)
+    )
+
+    total_count = trend_df["registration_count"].sum()
+    latest_count = trend_df.iloc[-1]["registration_count"]
+    latest_month = trend_df.iloc[-1]["standard_ym"]
+
+    m1, m2 = st.columns(2)
+    m1.metric("총 누적 등록 대수", f"{total_count:,} 대")
+    m2.metric(f"최근 등록 ({latest_month})", f"{latest_count:,} 대")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    fig = px.line(
+        trend_df,
+        x="standard_ym",
+        y="registration_count",
+        markers=True,
+        title=f"📈 {brand_name} 월별 등록 대수 추이",
+        labels={"standard_ym": "등록 월", "registration_count": "등록 대수(대)"},
+        text="registration_count"
+    )
+
+    fig.update_traces(
+        line=dict(color="#10b981", width=3),
+        marker=dict(size=8, color="#047857"),
+        textposition="top center",
+        texttemplate="%{text:,.0f}대"
+    )
+
+    fig.update_layout(
+        xaxis_type="category",
+        hovermode="x unified",
+        margin=dict(l=20, r=20, t=50, b=20),
+        height=380
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------------------------------------
 # 화면 뷰 함수들
@@ -454,9 +570,7 @@ def home_view():
 
     st.divider()
 
-    # --- 📌 2초 간격 랜덤 브랜드 로고 영역 ---
     st.markdown("### 🏆 주요 제조사 로고")
-
     shuffled_logos = list(LOGO_URL_MAP.items())
     random.shuffle(shuffled_logos)
     cols = st.columns(len(shuffled_logos))
@@ -482,7 +596,7 @@ def home_view():
 
     with right_col:
         st.markdown("### 🔍 차량 리뷰 및 평가 검색")
-        st.caption("리뷰 내용(성능, 문제점, 브랜드명 등)에 포함된 키워드를 입력해보세요.")
+        st.caption("리뷰 내용(제목, 내용 등)에 포함된 키워드를 입력해보세요.")
 
         review_keyword = st.text_input(
             "리뷰 검색어 입력",
@@ -508,7 +622,7 @@ def home_view():
                 else:
                     st.caption(f"총 **{len(result_review)}건**의 리뷰가 검색되었습니다.")
 
-                    display_cols = ["logo", "brand_name", "performance", "price", "issues"]
+                    display_cols = ["logo", "brand_name", "performance", "issues"]
 
                     event = st.dataframe(
                         result_review[display_cols],
@@ -520,9 +634,8 @@ def home_view():
                         column_config={
                             "logo": st.column_config.ImageColumn("로고", width="small"),
                             "brand_name": "브랜드",
-                            "performance": "주행/성능",
-                            "price": "가격/가성비",
-                            "issues": "단점/아쉬운점",
+                            "performance": "리뷰 내용",
+                            "issues": "제목",
                         },
                     )
 
@@ -546,81 +659,9 @@ def home_view():
 
                         show_review_dialog(car_name, logo_url, car_image_url, matched_reviews)
 
-    # 검색어를 입력하고 있을 때 타자 입력이 방해받거나 무한 루프가 끊기는 현상을 방지
-    # 사용자가 검색 상자에 입력 중이 아닐 때만 2초 후 rerun 실행
     if not review_keyword.strip():
         time.sleep(2)
         st.rerun()
-
-@st.dialog("📊 월별 등록 대수 추이 분석", width="large")
-def show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_url, car_history_df):
-    # 1. 팝업 헤더 영역 (로고, 차종명, 이미지)
-    c_logo, c_title, c_img = st.columns([1, 4, 3])
-
-    with c_logo:
-        if logo_url:
-            st.image(logo_url, width=45)
-
-    with c_title:
-        st.markdown(f"### **[{manufacturer}] {car_name}**")
-        st.caption("월별 신규 등록 대수 변화 추이")
-
-    with c_img:
-        if car_image_url:
-            st.image(car_image_url, width=150)
-
-    st.divider()
-
-    # 2. 데이터가 없는 경우 예외 처리
-    if car_history_df.empty:
-        st.info(f"'{car_name}' 모델에 대한 월별 등록 추이 데이터가 없습니다.")
-        return
-
-    # 3. 날짜순 정렬 (standard_ym 오름차순)
-    trend_df = car_history_df.sort_values(by="standard_ym", ascending=True).copy()
-
-    # 주요 요약 지표 (Metrics)
-    total_count = trend_df["registration_count"].sum()
-    avg_count = int(trend_df["registration_count"].mean())
-    latest_count = trend_df.iloc[-1]["registration_count"]
-    latest_month = trend_df.iloc[-1]["standard_ym"]
-
-    m1, m2, m3 = st.columns(3)
-    m1.metric("총 누적 등록 대수", f"{total_count:,} 대")
-    m2.metric("월평균 등록 대수", f"{avg_count:,} 대")
-    m3.metric(f"최근 등록 ({latest_month})", f"{latest_count:,} 대")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # 4. Plotly 선 그래프(Line Chart) 생성
-    fig = px.line(
-        trend_df,
-        x="standard_ym",
-        y="registration_count",
-        markers=True,
-        title=f"📈 {car_name} 월별 등록 대수 추이",
-        labels={"standard_ym": "등록 월", "registration_count": "등록 대수(대)"},
-        text="registration_count"
-    )
-
-    # 그래프 스타일링
-    fig.update_traces(
-        line=dict(color="#2563eb", width=3),
-        marker=dict(size=8, color="#1e40af"),
-        textposition="top center",
-        texttemplate="%{text:,.0f}대"
-    )
-
-    fig.update_layout(
-        xaxis_type="category",  # 월별 라벨 깔끔하게 표시
-        hovermode="x unified",
-        margin=dict(l=20, r=20, t=50, b=20),
-        height=380
-    )
-
-    # Streamlit 화면에 그래프 출력
-    st.plotly_chart(fig, use_container_width=True)
-
 
 def registration_status_view():
     section_title("자동차 등록 현황 조회", "월별로 등록된 자동차 현황입니다. 행을 클릭하면 월별 등록 추이 그래프를 확인할 수 있습니다.")
@@ -629,7 +670,6 @@ def registration_status_view():
         st.warning("등록 현황 데이터가 존재하지 않습니다.")
         return
 
-    # 1. 10개씩 페이징 처리
     page_size = 10
     total_items = len(registration_df)
     total_pages = max((total_items + page_size - 1) // page_size, 1)
@@ -650,13 +690,11 @@ def registration_status_view():
     start_idx = (page_number - 1) * page_size
     end_idx = start_idx + page_size
 
-    # 📌 클릭 인덱스 오작동 방지를 위한 reset_index
     page_df = registration_df.iloc[start_idx:end_idx].copy().reset_index(drop=True)
 
     display_cols = ["logo", "manufacturer", "car_model_type", "registration_count", "standard_ym"]
     existing_cols = [col for col in display_cols if col in page_df.columns]
 
-    # 2. 10개 행 출력 및 클릭 이벤트 감지
     event = st.dataframe(
         page_df[existing_cols],
         use_container_width=True,
@@ -673,7 +711,6 @@ def registration_status_view():
         }
     )
 
-    # 3. 행 선택 시 월별 등록 추이 그래프 팝업 출력
     selected_rows = event.selection.get("rows", [])
     if selected_rows:
         selected_idx = selected_rows[0]
@@ -684,42 +721,35 @@ def registration_status_view():
         logo_url = selected_row.get("logo", "")
         car_image_url = selected_row.get("car_image", "")
 
-        # 📌 전체 registration_df에서 해당 차종/모델의 월별 이력 데이터 전체를 추출
         car_history_df = registration_df[registration_df["car_model_type"] == car_name]
-
-        # 팝업 호출
         show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_url, car_history_df)
 
 def brand_ranking_view():
     section_title("브랜드별 랭킹", "월별 및 누적 브랜드 등록 순위 현황입니다. 행을 클릭하면 해당 브랜드의 월별 등록 추이를 확인할 수 있습니다.")
-    
+
     target_df = brand_ranking_df
-    
+
     if target_df.empty:
         st.warning("브랜드 랭킹 데이터가 존재하지 않습니다.")
         return
 
     target_ym, target_type = render_filter(target_df, show_type_filter=True, key_prefix="brand_rank")
-    
+
     filtered_df = target_df.copy()
 
-    # 구분 필터(국산/수입) 먼저 적용
     if target_type != "전체" and "manufacturer_type" in filtered_df.columns:
         filtered_df = filtered_df[filtered_df["manufacturer_type"] == target_type]
 
-    # 📌 연/월 선택 조건별 동적 데이터 집계
     if target_ym == "ALL":
-        # 1. 전체 연도 + 전체 월 선택 시: 모든 데이터 누적 합산
         display_df = (
             filtered_df.groupby(["brand_name", "manufacturer_type", "logo"], as_index=False)
             .agg({"registration_count": "sum"})
             .sort_values(by="registration_count", ascending=False)
         )
         display_df["standard_ym"] = "전체 기간"
-        display_df["mom_display"] = "➖ 0 대"  # 전체 기간 누적이므로 비교군 없음
-        
+        display_df["mom_display"] = "➖ 0 대"
+
     elif target_ym and (target_ym.endswith("-") or target_ym.startswith("-")):
-        # 2. 특정 연도 전체 (예: '2026-') 또는 특정 월 전체 (예: '-05') 선택 시: 해당 기간 누적 합산
         if target_ym.endswith("-"):
             year_prefix = target_ym.split("-")[0]
             sub_df = filtered_df[filtered_df["standard_ym"].str.startswith(year_prefix)]
@@ -736,9 +766,8 @@ def brand_ranking_view():
         )
         display_df["standard_ym"] = period_label
         display_df["mom_display"] = "➖ 0 대"
-        
+
     else:
-        # 3. 특정 연-월 (예: '2026-05')이 명확히 지정된 경우: 기존 월별 증감(MoM) 데이터 그대로 표출
         display_df = filtered_df[filtered_df["standard_ym"] == target_ym].copy()
         display_df = display_df.sort_values(by="registration_count", ascending=False)
 
@@ -767,42 +796,46 @@ def brand_ranking_view():
         }
     )
 
-    # 행 클릭 시 선택한 브랜드의 전체 월별 추이 그래프 호출
     selected_rows = event.selection.get("rows", [])
     if selected_rows:
         selected_idx = selected_rows[0]
         selected_data = display_df.iloc[selected_idx]
-        
-        brand_name = selected_data.get("brand_name", "브랜드")
+        brand_name = selected_data["brand_name"]
         logo_url = selected_data.get("logo", "")
-        
-        # 선택된 브랜드의 전체 월별 히스토리 추출
-        brand_history_df = target_df[target_df["brand_name"] == brand_name].copy()
-        show_registration_trend_dialog(brand_name, "브랜드 종합", logo_url, "", brand_history_df)
-        
-def model_ranking_view():
-    section_title("모델별 랭킹", "월별 차량 모델별 등록순위 현황입니다. 클릭 시 리뷰를 확인할 수 있습니다.")
 
-    if model_ranking_df.empty:
+        brand_history_df = brand_ranking_df[brand_ranking_df["brand_name"] == brand_name]
+        show_brand_trend_dialog(brand_name, logo_url, brand_history_df)
+
+def model_ranking_view():
+    section_title("모델별 랭킹", "차량 모델별 등록 순위 및 상세 리뷰를 확인할 수 있습니다.")
+
+    target_df = model_ranking_df
+
+    if target_df.empty:
         st.warning("모델 랭킹 데이터가 존재하지 않습니다.")
         return
 
-    target_ym, target_type = render_filter(model_ranking_df, show_type_filter=True, key_prefix="model_rank")
+    target_ym, _ = render_filter(target_df, show_type_filter=False, key_prefix="model_rank")
 
-    filtered_df = model_ranking_df.copy()
-    if target_ym:
-        filtered_df = filtered_df[filtered_df["standard_ym"] == target_ym]
-    if target_type != "전체":
-        filtered_df = filtered_df[filtered_df["manufacturer_type"] == target_type]
+    filtered_df = target_df.copy()
+
+    if target_ym != "ALL":
+        if target_ym.endswith("-"):
+            year_prefix = target_ym.split("-")[0]
+            filtered_df = filtered_df[filtered_df["standard_ym"].str.startswith(year_prefix)]
+        elif target_ym.startswith("-"):
+            month_suffix = target_ym.split("-")[1]
+            filtered_df = filtered_df[filtered_df["standard_ym"].str.endswith(month_suffix)]
+        else:
+            filtered_df = filtered_df[filtered_df["standard_ym"] == target_ym]
 
     if filtered_df.empty:
         st.info("선택한 조건에 해당하는 모델 랭킹 데이터가 없습니다.")
         return
 
-    # 📌 핵심 수정 1: 클릭 인덱스와 데이터프레임 인덱스 일치를 위해 reset_index 수행
-    display_df = filtered_df.reset_index(drop=True)
+    display_df = filtered_df.sort_values(by="registration_count", ascending=False).reset_index(drop=True)
 
-    display_cols = ["logo", "car_name", "brand_name", "fuel_type", "registration_count", "mom_increase"]
+    display_cols = ["logo", "car_name", "brand_name", "registration_count", "mom_increase", "standard_ym"]
     existing_cols = [c for c in display_cols if c in display_df.columns]
 
     event = st.dataframe(
@@ -814,44 +847,40 @@ def model_ranking_view():
         key="model_rank_table",
         column_config={
             "logo": st.column_config.ImageColumn("로고", width="small"),
-            "car_name": "차량명",
+            "car_name": "차량 모델명",
             "brand_name": "브랜드",
-            "fuel_type": "연료",
             "registration_count": st.column_config.NumberColumn("등록대수", format="%d 대"),
-            "mom_increase": st.column_config.NumberColumn("전월 대비", format="%+d 대"),
+            "mom_increase": st.column_config.NumberColumn("전월대비 증감", format="%d 대"),
+            "standard_ym": "조회 월",
         }
     )
 
     selected_rows = event.selection.get("rows", [])
     if selected_rows:
         selected_idx = selected_rows[0]
-
-        # 📌 핵심 수정 2: reset_index가 적용된 display_df에서 정확한 행을 가져옴
         selected_data = display_df.iloc[selected_idx]
 
-        model_id = selected_data.get("model_id")
-        car_name = selected_data.get("car_name", "차량 정보 없음")
-        logo_url = selected_data.get("logo", DEFAULT_LOGO)
-        car_image_url = selected_data.get("car_image", DEFAULT_CAR_IMAGE)
+        car_name = selected_data["car_name"]
+        model_id = selected_data["model_id"]
+        logo_url = selected_data.get("logo", "")
+        car_image_url = selected_data.get("car_image", "")
 
-        # 📌 핵심 수정 3: review_df 매핑 (model_id 또는 brand_name 매핑)
-        matched_reviews = review_df[review_df["model_id"] == model_id] if "model_id" in review_df.columns else pd.DataFrame()
-
+        matched_reviews = review_df[review_df["model_id"] == model_id]
         show_review_dialog(car_name, logo_url, car_image_url, matched_reviews)
 
 def faq_view():
-    section_title("자주 묻는 질문 (FAQ)", "차량 등록 및 절차와 관련된 주요 FAQ 목록입니다.")
+    section_title("자주 묻는 질문 (FAQ)", "자동차 등록, 명의 변경 및 이전 관련 궁금증을 해결해 드립니다.")
 
     if faq_df.empty:
         st.info("등록된 FAQ 데이터가 없습니다.")
         return
 
     for _, row in faq_df.iterrows():
-        with st.expander(f"❓ {row['question']}"):
-            st.write(row['answer'])
+        with st.expander(f"Q. {row['question']}"):
+            st.markdown(f"**A.** {row['answer']}")
 
 # ---------------------------------------------------------
-# Tab Routing
+# 라우팅
 # ---------------------------------------------------------
 if active_tab == "Home":
     home_view()

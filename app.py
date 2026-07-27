@@ -9,7 +9,7 @@ import time
 from db import get_engine
 
 # 각 뷰 모듈 임포트
-from views.home import home_view, load_registration_data, load_model_ranking_data, load_review_data, load_faq_data, LOGO_URL_MAP
+from views.home import home_view
 from views.registration import registration_status_view
 from views.brand_ranking import brand_ranking_view
 from views.model_ranking import model_ranking_view

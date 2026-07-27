@@ -1,6 +1,11 @@
 import streamlit as st
-from components import section_title, render_filter
-from dialogs import show_review_dialog
+from views.home import (
+    load_model_ranking_data,
+    load_review_data,
+    section_title,
+    show_review_dialog,
+)
+from views.brand_ranking import render_filter
 
 
 def _format_mom_increase(value):
@@ -17,7 +22,10 @@ def _format_mom_increase(value):
         return "➖ 0 대"
 
 
-def model_ranking_view(model_ranking_df, review_df):
+def model_ranking_view():
+    model_ranking_df = load_model_ranking_data()
+    review_df = load_review_data()
+
     section_title(
         "모델별 랭킹 순위",
         "기준 연월과 국산/수입 구분을 선택하면 등록대수 기준 상위 10개 모델을 조회합니다.",

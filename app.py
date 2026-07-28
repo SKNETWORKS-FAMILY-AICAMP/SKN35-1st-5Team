@@ -26,7 +26,10 @@ styles.apply_custom_styles()
 # 사이드바 메뉴 구성
 # ---------------------------------------------------------
 with st.sidebar:
-    st.markdown(f"## {config.sidebar_title}")
+    # 1. 이미지만 단독으로 크게 배치 (width를 조절해 크기를 키우거나 줄일 수 있습니다)
+    # 중앙 정렬이 필요하다면 st.columns를 활용해 가운데에 넣을 수도 있습니다.
+    st.image(config.sidebar_logo, width=180)  # 예: 180px (필요에 따라 150~220 사이로 조절)
+    
     st.caption(config.sidebar_caption)
     st.divider()
 
@@ -40,7 +43,6 @@ with st.sidebar:
 
     st.divider()
     st.caption(config.footer_caption)
-
 # ---------------------------------------------------------
 # 라우팅 맵핑
 # ---------------------------------------------------------

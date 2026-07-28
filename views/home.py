@@ -33,7 +33,7 @@ def home_view():
     faq_df = load_faq_data()
 
     section_title(
-        "전국 자동차 등록 현황 대시보드 (Home)",
+        "어디스카(ATHISCar)",
         "주요 통계 요약 및 월별 등록 추이, 차량 리뷰 검색 기능을 제공합니다.",
     )
 

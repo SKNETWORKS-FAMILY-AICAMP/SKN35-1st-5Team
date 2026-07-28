@@ -98,7 +98,7 @@ def registration_status_view():
             "로고": st.column_config.ImageColumn("로고", width="small"),
             "제조사": st.column_config.TextColumn("제조사"),
             "차종/모델": st.column_config.TextColumn("차종/모델"),
-            "등록개수": st.column_config.NumberColumn("등록개수", format="%d 대"),
+            "등록개수": st.column_config.NumberColumn("등록개수", format="%d 대",alignment="left"),
             "등록 월": st.column_config.TextColumn("등록 월"),
         }
     )

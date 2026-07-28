@@ -105,7 +105,7 @@ SKN35-1st-5Team/
 
 ## 🗄️ ERD
 
-![ERD](image/erd.png)
+![ERD](image/new_erd.png)
 
 ## 🚀 로컬에서 실행하기
 

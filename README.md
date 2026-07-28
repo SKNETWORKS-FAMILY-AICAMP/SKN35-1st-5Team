@@ -26,27 +26,31 @@
 
 ```text
 SKN35-1st-5Team/
-├── app.py                    # 진입점: 페이지 설정, 사이드바 라우팅
-├── db.py                     # SQLAlchemy 엔진 및 DB 초기화
-├── data_loader.py            # 화면별 데이터 로드 (st.cache_data)
-├── dialogs.py                # 상세 추이 / 리뷰 팝업(dialog) 모음
-├── constants.py               # 브랜드 로고 · 차량 이미지 매핑
+├── app.py                        # 진입점: 페이지 설정, 사이드바 라우팅
+├── db.py                         # SQLAlchemy 엔진 및 DB 초기화
+├── data_loader.py                # 화면별 데이터 로드 (st.cache_data)
+├── dialogs.py                    # 상세 추이 / 리뷰 팝업(dialog) 모음
+├── constants.py                  # 브랜드 로고 · 차량 이미지 매핑
 ├── config/
-│   ├── dataclasses.py        # 앱 메타 설정(AppConfig)
-│   └── enums.py               # 사이드바 메뉴 정의
+│   ├── dataclasses.py            # 앱 메타 설정(AppConfig)
+│   └── enums.py                  # 사이드바 메뉴 정의
 ├── styles/
-│   └── styles.py              # 전역 커스텀 CSS, 사이드바 메뉴 스타일
+│   └── styles.py                 # 전역 커스텀 CSS, 사이드바 메뉴 스타일
 ├── sql/
-│   ├── select_tables.py       # 조회 쿼리 모음
-│   └── test_qna_table.py      # 테이블 생성 DDL, FAQ 초기 데이터
+│   ├── select_tables.py          # 조회 쿼리 모음
+│   └── test_qna_table.py         # 테이블 생성 DDL, FAQ 초기 데이터
 ├── views/
-│   ├── home.py                 # 홈 화면
-│   ├── registration.py         # 자동차 등록 현황
-│   ├── brand_ranking.py        # 브랜드별 랭킹
-│   ├── model_ranking.py        # 모델별 랭킹
-│   └── faq.py                  # FAQ
-├── clower/                     # 리뷰 크롤링 스크립트 (Encar)
-└── image/                      # ERD 등 문서용 이미지
+│   ├── home.py                   # 홈 화면
+│   ├── registration.py           # 자동차 등록 현황
+│   ├── brand_ranking.py          # 브랜드별 랭킹
+│   ├── model_ranking.py          # 모델별 랭킹
+│   └── faq.py                    # FAQ
+├── clower/                       # Selenium 크롤링 스크립트
+│   ├── clower_carisyou.py        # carisyou.com → 월별 등록 현황 수집
+│   └── clower_review_encar.py    # encar.com → 실사용자 리뷰 수집
+└── image/                        # 로고 · ERD 등 문서/에셋 이미지
+    ├── athiscar.png
+    └── erd.png
 ```
 
 ## 🗄️ ERD
@@ -100,7 +104,7 @@ uv run streamlit run app.py
 
 ## 📊 데이터 파이프라인
 
-1. `clower/` 스크립트가 Encar 등에서 등록 현황·리뷰 데이터를 크롤링
+1. `clower/` 스크립트가 carisyou.com(등록 현황), encar.com(리뷰) 데이터를 크롤링
 2. `db.py` / `sql/`을 통해 TiDB에 적재
 3. `data_loader.py`가 `@st.cache_data`로 조회 결과를 캐싱해 각 화면에 전달
 4. `views/` 각 화면이 필터링·페이지네이션 후 표 및 카드 UI로 렌더링

@@ -113,67 +113,161 @@ def show_registration_trend_dialog(car_name, manufacturer, logo_url, car_image_u
     # Streamlit 화면에 그래프 출력
     st.plotly_chart(fig, use_container_width=True)
 
+    
+def _flatten_html(html):
+    """st.markdown은 Markdown 파서를 거치므로, 줄 앞의 들여쓰기가 4칸 이상이면
+    코드블록으로 오인되어 태그가 그대로 노출된다. 각 줄의 선행 공백을 제거해 방지한다."""
+    return "\n".join(line.strip() for line in html.strip().splitlines())
 
-def _render_star_rating(score, max_score=5.0):
-    """0.5점 단위 실수 평점을 별 아이콘 바(HTML)로 변환합니다."""
+
+def _safe_float(value):
     try:
-        score = float(score)
+        result = float(value)
     except (TypeError, ValueError):
-        return ""
+        return None
+    return result if result == result else None  # NaN 체크
+
+
+def _dark_stars(score, max_score=5.0, size="1.05rem", text_color="#e5e7eb", empty_color="#39415a"):
+    """0.5점 단위 실수 평점을 별 아이콘 바(HTML)로 변환합니다. text_color/empty_color로 밝은/어두운 배경 모두 대응."""
+    score = _safe_float(score)
+    if score is None:
+        return "<span style='color:#8b93a7;'>평점 없음</span>"
 
     score = max(0.0, min(max_score, score))
     percent = (score / max_score) * 100
 
     return f"""
-    <div style="display: flex; align-items: center; gap: 6px; margin: 4px 0 10px 0;">
-        <div style="position: relative; display: inline-block; font-size: 1.15rem; line-height: 1; letter-spacing: 2px;">
-            <div style="color: #d1d5db;">★★★★★</div>
-            <div style="position: absolute; top: 0; left: 0; width: {percent}%; overflow: hidden; white-space: nowrap; color: #f59e0b;">★★★★★</div>
+    <span style="display: inline-flex; align-items: center; gap: 6px;">
+        <span style="position: relative; display: inline-block; font-size: {size}; line-height: 1; letter-spacing: 2px;">
+            <span style="color: {empty_color};">★★★★★</span>
+            <span style="position: absolute; top: 0; left: 0; width: {percent}%; overflow: hidden; white-space: nowrap; color: #fbbf24;">★★★★★</span>
+        </span>
+        <span style="font-weight: 700; color: {text_color}; font-size: 0.85rem;">{score:.1f} / {max_score:.1f}</span>
+    </span>
+    """
+
+
+def _dark_bar_row(label, score, max_score=5.0):
+    score = _safe_float(score)
+    percent = 0 if score is None else max(0.0, min(max_score, score)) / max_score * 100
+    score_text = "-" if score is None else f"{score:.1f}"
+
+    return f"""
+    <div style="display:flex; align-items:center; gap:10px; margin:6px 0;">
+        <span style="width:52px; flex-shrink:0; font-size:0.78rem; color:#6b7280; letter-spacing:0.5px;">{label}</span>
+        <div style="flex:1; height:6px; border-radius:4px; background:#e5e7eb; overflow:hidden;">
+            <div style="width:{percent}%; height:100%; background:linear-gradient(90deg,#3b6fe0,#5b8def); border-radius:4px;"></div>
         </div>
-        <span style="font-weight: bold; color: #4b5563;">{score:.1f} / {max_score:.1f}</span>
+        <span style="width:28px; flex-shrink:0; text-align:right; font-size:0.78rem; color:#374151;">{score_text}</span>
     </div>
     """
 
 
 @st.dialog("📝 차량 상세 리뷰", width="large")
 def show_review_dialog(car_name, logo_url, car_image_url, matched_reviews):
-    c_logo, c_title, c_img = st.columns([1, 4, 3])
+    review_count = len(matched_reviews)
+    avg_overall = _safe_float(matched_reviews["overall_rating"].mean()) if review_count else None
+    avg_perform = _safe_float(matched_reviews["perform_score"].mean()) if review_count else None
+    avg_price = _safe_float(matched_reviews["price_score"].mean()) if review_count else None
+    avg_fault = _safe_float(matched_reviews["fault_score"].mean()) if review_count else None
+    overall_text = "-" if avg_overall is None else f"{avg_overall:.1f}"
 
-    with c_logo:
-        if logo_url:
-            st.image(logo_url, width=45)
+    logo_img = f'<img src="{logo_url}" style="width:44px;height:44px;object-fit:contain;"/>' if logo_url else ""
+    car_img = f'<img src="{car_image_url}" style="width:100%;max-width:170px;border-radius:12px;object-fit:contain;"/>' if car_image_url else ""
 
-    with c_title:
-        st.markdown(f"### **{car_name}**")
-        st.caption(f"등록된 실사용자 리뷰: **{len(matched_reviews)}개**")
+    header_html = f"""
+    <style>
+    .rv-card {{ background:#ffffff; border:1px solid #e5e7eb;
+        border-radius:16px; padding:20px 22px; margin-bottom:18px; box-shadow:0 1px 3px rgba(0,0,0,0.06); }}
+    .rv-header {{ display:flex; flex-wrap:wrap; align-items:center; gap:20px; }}
+    .rv-logo {{ width:64px; height:64px; border-radius:50%; background:#fff; border:1px solid #e5e7eb;
+        display:flex; align-items:center; justify-content:center; flex-shrink:0; }}
+    .rv-name-block {{ min-width:130px; }}
+    .rv-car-name {{ color:#111827; font-weight:700; font-size:1.05rem; }}
+    .rv-car-count {{ color:#6b7280; font-size:0.8rem; margin-top:2px; }}
+    .rv-car-img-wrap {{ flex-shrink:0; }}
+    .rv-rating-panel {{ flex:1; min-width:180px; background:#f8fafc; border:1px solid #e5e7eb;
+        border-radius:12px; padding:12px 16px; }}
+    .rv-rating-title {{ display:flex; align-items:center; justify-content:space-between;
+        font-size:0.72rem; letter-spacing:1px; color:#6b7280; font-weight:700; }}
+    .rv-rating-badge {{ background:#eef2ff; color:#3b6fe0; border:1px solid #c7d7fb;
+        border-radius:999px; padding:2px 10px; font-size:0.75rem; font-weight:700; }}
+    </style>
+    <div class="rv-card">
+        <div class="rv-header">
+            <div class="rv-logo">{logo_img}</div>
+            <div class="rv-name-block">
+                <div class="rv-car-name">{car_name}</div>
+                <div class="rv-car-count">등록된 실사용자 리뷰: {review_count}개</div>
+            </div>
+            <div class="rv-car-img-wrap">{car_img}</div>
+            <div class="rv-rating-panel">
+                <div class="rv-rating-title">OVERALL RATING <span class="rv-rating-badge">{overall_text} / 5.0</span></div>
+                <div style="margin:8px 0 10px 0;">{_dark_stars(avg_overall, size="1.3rem", text_color="#1f2937", empty_color="#e5e7eb")}</div>
+                {_dark_bar_row("성능", avg_perform)}
+                {_dark_bar_row("가격", avg_price)}
+                {_dark_bar_row("문제점", avg_fault)}
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(_flatten_html(header_html), unsafe_allow_html=True)
 
-    with c_img:
-        if car_image_url:
-            st.image(car_image_url, width=160)
-
-    st.divider()
+    st.markdown(
+        _flatten_html(
+            """
+            <div style="display:flex; align-items:center; gap:8px; margin:4px 0 12px 0;">
+                <div style="width:4px; height:16px; background:#5b8def; border-radius:2px;"></div>
+                <span style="color:#111827; font-weight:700; font-size:0.85rem; letter-spacing:1px;">USER REVIEWS</span>
+            </div>
+            """
+        ),
+        unsafe_allow_html=True,
+    )
 
     if matched_reviews.empty:
         st.info(f"'{car_name}'에 대한 등록된 상세 리뷰가 없습니다.")
     else:
         for idx, row in matched_reviews.reset_index(drop=True).iterrows():
-            st.markdown(f"**리뷰 #{idx + 1}**")
+            performance = row.get("performance") or "-"
+            issues = row.get("issues") or "-"
+            fault_title = row.get("fault_title") or "-"
 
-            star_html = _render_star_rating(row.get("overall_rating"))
-            if star_html:
-                st.markdown(star_html, unsafe_allow_html=True)
+            stars_html = _dark_stars(row.get("overall_rating"), text_color="#1f2937", empty_color="#e5e7eb")
 
-            performance = row.get("performance", "-")
-            issues = row.get("issues", "-")
-
-            c1, c2 = st.columns(2)
-            with c1:
-                st.info(f"**🚀 리뷰 내용**\n\n{performance}")
-            with c2:
-                st.warning(f"**⚠️ 제목**\n\n{issues}")
-
-            if idx < len(matched_reviews) - 1:
-                st.markdown("<hr style='margin: 12px 0; border: 0.5px solid #e2e8f0;'>", unsafe_allow_html=True)
+            review_html = f"""
+            <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:14px;
+                padding:16px 18px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:34px; height:34px; border-radius:50%; background:#eef2ff;
+                            display:flex; align-items:center; justify-content:center; color:#4f46e5; font-weight:700; font-size:0.8rem;">
+                            R{idx + 1}
+                        </div>
+                        <div>
+                            <div style="color:#111827; font-weight:700; font-size:0.9rem;">리뷰 #{idx + 1}</div>
+                            <div style="margin-top:2px;">{stars_html}</div>
+                        </div>
+                    </div>
+                    <div style="background:#fff7e6; border:1px solid #fde3a7; flex:0 0 auto; min-width:max-content;
+                        border-radius:10px; padding:8px 14px; font-size:1.05rem; font-weight:700; color:#92600a; white-space:nowrap;">
+                        🚗 제목: &quot;{issues}&quot;
+                    </div>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:14px;">
+                    <div style="flex:1; min-width:220px; background:#FAEAFF; border-radius:10px; padding:12px 14px;">
+                        <div style="color:#9333ea; font-weight:800; font-size:1rem; margin-bottom:6px;">🚀 리뷰 내용</div>
+                        <div style="color:#3f2a4a; font-size:0.85rem; line-height:1.5;">{performance}</div>
+                    </div>
+                    <div style="flex:1; min-width:220px; background:#F1FFF5; border-radius:10px; padding:12px 14px;">
+                        <div style="color:#16a34a; font-weight:800; font-size:1rem; margin-bottom:6px;">⚠️ 문제점/특이사항</div>
+                        <div style="color:#2a4a35; font-size:0.85rem; line-height:1.5;">{fault_title}</div>
+                    </div>
+                </div>
+            </div>
+            """
+            st.markdown(_flatten_html(review_html), unsafe_allow_html=True)
 
 
 @st.dialog("📊 브랜드 분석 및 모델별 순위", width="large")

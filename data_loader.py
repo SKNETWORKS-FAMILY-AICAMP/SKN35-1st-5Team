@@ -69,7 +69,8 @@ def load_review_data():
     df = pd.read_sql(select_tables.SELECT_REVIEW_QUERY, con=engine)
     if not df.empty:
         df["logo"] = df["brand_name"].apply(_resolve_brand_logo)
-        df["overall_rating"] = pd.to_numeric(df["overall_rating"], errors="coerce")
+        for score_col in ["overall_rating", "perform_score", "price_score", "fault_score"]:
+            df[score_col] = pd.to_numeric(df[score_col], errors="coerce")
     return df
 
 

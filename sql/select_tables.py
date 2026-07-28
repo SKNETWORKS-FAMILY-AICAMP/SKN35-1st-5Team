@@ -35,18 +35,24 @@ LEFT JOIN car_registration r ON m.regist_id = r.regist_id
 ORDER BY m.standard_month DESC
 """
 
-# 4. 리뷰 및 리뷰 상세 조인 조회 쿼리
+# 4. 리뷰 및 리뷰 상세 조인 조회 쿼리 (domain_type: 1=종합, 2=성능, 3=가격, 4=문제점)
 SELECT_REVIEW_QUERY = """
 SELECT r.review_id,
        r.model_id,
        r.regist_id,
        r.brand_name_review AS brand_name,
-       t.total_score AS overall_rating,
-       t.total_review_content AS performance,
-       t.domain_type AS price,
-       t.total_review_title AS issues
+       MAX(CASE WHEN t.domain_type = '1' THEN t.total_score END) AS overall_rating,
+       MAX(CASE WHEN t.domain_type = '1' THEN t.total_review_content END) AS performance,
+       MAX(CASE WHEN t.domain_type = '1' THEN t.total_review_title END) AS issues,
+       MAX(CASE WHEN t.domain_type = '2' THEN t.total_score END) AS perform_score,
+       MAX(CASE WHEN t.domain_type = '2' THEN t.total_review_title END) AS perform_title,
+       MAX(CASE WHEN t.domain_type = '3' THEN t.total_score END) AS price_score,
+       MAX(CASE WHEN t.domain_type = '3' THEN t.total_review_title END) AS price_title,
+       MAX(CASE WHEN t.domain_type = '4' THEN t.total_score END) AS fault_score,
+       MAX(CASE WHEN t.domain_type = '4' THEN t.total_review_title END) AS fault_title
 FROM review r
-LEFT JOIN total_review t ON r.review_id = t.review_id2 AND t.domain_type = '1'
+LEFT JOIN total_review t ON r.review_id = t.review_id2
+GROUP BY r.review_id, r.model_id, r.regist_id, r.brand_name_review
 """
 
 # 5. FAQ 조회 쿼리

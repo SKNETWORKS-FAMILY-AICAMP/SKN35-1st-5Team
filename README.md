@@ -1,6 +1,34 @@
 # 🚗 Auto Insight — 자동차 등록 현황 통합 시스템
 
+## 👥 팀
+
+SKN35 1기 5조 (SKNETWORKS-FAMILY-AICAMP)
+
+<table>
+  <tr>
+    <td align="center"><img src="image/p1.png" width="120"/></td>
+    <td align="center"><img src="image/p2.png" width="120"/></td>
+    <td align="center"><img src="image/p3.png" width="120"/></td>
+    <td align="center"><img src="image/p4.png" width="120"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>손채영</b><br/>DB 설계 · (모델별, 리뷰)데이터 연동<br/>모델별 랭킹 · 리뷰 Dialog<br/>Git 관리<br/>UI/CSS 정리</td>
+    <td align="center"><b>차윤정</b><br/>DB설계<br/>PPT 작성<br/>Git 관리<br/>FAQ 데이터 연동 및 관리</td>
+    <td align="center"><b>유지호</b><br/>웹 크롤링(엔카 사이트)<br/>db설계(리뷰)<br/>Git 관리<br/>최종 ui  수정</td>
+    <td align="center"><b>김경민</b><br/>DB설계<br/>DB데이터 저장(차 등록 현황)<br/>Streamlit<br/> UI초기 단계 설정<br/>Git 관리<br/>카이즈유 웹 크롤링(Selenium)</td>
+  </tr>
+</table>
+
+
+<br>
 국내 월별 자동차 신규 등록 데이터를 수집·적재하고, 브랜드/모델별 랭킹과 실사용자 리뷰를 한눈에 볼 수 있는 Streamlit 대시보드입니다.
+</br>
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://skn35-1st-5team-4la6aeyjw9ycv3cwhetdj9.streamlit.app/)
+
+### 🔗 배포 링크
+
+**https://skn35-1st-5team-4la6aeyjw9ycv3cwhetdj9.streamlit.app/**
 
 > SKN35_1st_Project_Group5
 
@@ -21,6 +49,28 @@
 - **DB**: TiDB Cloud (MySQL 호환)
 - **크롤링**: Selenium, webdriver-manager
 - **패키지 관리**: [uv](https://docs.astral.sh/uv/)
+
+## 📦 필요한 라이브러리 / 설치
+
+### 실행 환경
+
+- Python 3.12 이상
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (패키지 매니저)
+
+### 앱 실행에 필요한 라이브러리 (`uv sync`로 자동 설치)
+
+`pyproject.toml`에 정의되어 있으며 `pandas`는 Streamlit의 의존성으로 함께 설치됩니다.
+
+| 라이브러리 | 용도 |
+| --- | --- |
+| streamlit | 웹 앱 프레임워크 |
+| streamlit-option-menu | 사이드바 메뉴 UI |
+| plotly | 추이/상세 차트 |
+| sqlalchemy | DB 엔진/쿼리 실행 |
+| pymysql | MySQL(TiDB) 드라이버 |
+| mysql-connector-python | MySQL 접속 보조 드라이버 |
+| python-dotenv | `.env` 환경 변수 로드 |
+| certifi | TiDB Cloud SSL 인증서 |
 
 ## 📁 프로젝트 구조
 
@@ -57,15 +107,11 @@ SKN35-1st-5Team/
 
 ![ERD](image/erd.png)
 
-## 🚀 시작하기
+## 🚀 로컬에서 실행하기
 
-### 1. 요구 사항
+바로 사용해보려면 위 배포 링크로 접속하면 됩니다. 아래는 코드를 직접 실행/개발할 때의 절차입니다.
 
-- Python 3.12 이상
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- MySQL 호환 DB (TiDB Cloud 등) 접속 정보
-
-### 2. 설치
+### 1. 클론 및 라이브러리 설치
 
 ```bash
 git clone https://github.com/SKNETWORKS-FAMILY-AICAMP/SKN35-1st-5Team.git
@@ -73,28 +119,13 @@ cd SKN35-1st-5Team
 uv sync
 ```
 
-### 3. 환경 변수 설정
-
-프로젝트 루트에 `.env` 파일을 생성하고 아래 값을 채워주세요.
-
-```env
-DB_USERNAME=your_db_username
-DB_PASSWORD=your_db_password
-DB_HOST=your_db_host
-DB_PORT=4000
-DB_DATABASE=cars_db
-
-# TiDB Cloud 등 SSL이 필요한 경우 (host가 tidbcloud.com이면 자동 활성화)
-# DB_SSL_ENABLED=true
-```
-
-### 4. DB 테이블 초기화 (최초 1회)
+### 2. DB 테이블 초기화 (최초 1회)
 
 ```bash
 uv run python db.py
 ```
 
-### 5. 앱 실행
+### 3. 앱 실행
 
 ```bash
 uv run streamlit run app.py
@@ -108,7 +139,3 @@ uv run streamlit run app.py
 2. `db.py` / `sql/`을 통해 TiDB에 적재
 3. `data_loader.py`가 `@st.cache_data`로 조회 결과를 캐싱해 각 화면에 전달
 4. `views/` 각 화면이 필터링·페이지네이션 후 표 및 카드 UI로 렌더링
-
-## 👥 팀
-
-SKN35 1기 5조 (SKNETWORKS-FAMILY-AICAMP)

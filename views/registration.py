@@ -24,7 +24,7 @@ def render_registration_metrics(registration_df):
     with col1:
         st.metric(label="총 등록 대수", value=f"{total_registrations:,} 대",)
     with col2:
-        st.metric(label="신규 모델", value=f"{unique_models}",)
+        st.metric(label="모델 수", value=f"{unique_models} 종류",)
     with col3:
         st.metric(label="평균 등록 수", value=f"{average_quota:,.0f} 대",)
 

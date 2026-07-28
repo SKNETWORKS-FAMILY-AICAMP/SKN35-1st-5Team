@@ -17,14 +17,21 @@ def _load_logo_base64(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode("utf-8")
 
 
+def _flatten_html(html):
+    """st.markdown은 Markdown 파서를 거치므로, 빈 줄 뒤에 들여쓰기된 줄이 오면
+    코드블록으로 오인되어 태그가 그대로 노출된다(예: logo_html이 빈 문자열일 때).
+    각 줄의 선행 공백을 제거하고 빈 줄은 아예 없애 이를 방지한다."""
+    lines = (line.strip() for line in html.strip().splitlines())
+    return "\n".join(line for line in lines if line)
+
+
 def section_title(title, caption, logo_path: Path | None = None):
     logo_html = ""
     if logo_path and logo_path.exists():
         logo_b64 = _load_logo_base64(logo_path)
         logo_html = f'<img src="data:image/png;base64,{logo_b64}" class="hero-logo" alt="로고"/>'
 
-    st.markdown(
-        f"""
+    html = f"""
         <div class="hero">
             <div class="hero-content-row">
                 {logo_html}
@@ -34,9 +41,8 @@ def section_title(title, caption, logo_path: Path | None = None):
                 </div>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """
+    st.markdown(_flatten_html(html), unsafe_allow_html=True)
 
 @st.fragment(run_every=2)
 def rotating_logos():

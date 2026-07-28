@@ -25,9 +25,11 @@ def apply_custom_styles() -> None:
             [data-testid="stSidebar"] * {
                 color: white !important;
             }
+            [data-testid="stSidebar"] [data-testid="stImage"] {
+                display: flex;
+                justify-content: center;
+            }
             :root {
-              --hero-bg: linear-gradient(135deg, #eff6ff 0%, #ffffff 55%, #f8fafc 100%);
-              --hero-border: #dbeafe;
               --hero-text: #0f172a;        /* 메인 글자색 */
               --hero-subtext: #475569;     /* 설명글/보조 글자색 */
             }
@@ -36,12 +38,31 @@ def apply_custom_styles() -> None:
             .hero {
                 padding: 1.2rem 1.3rem;
                 border-radius: 18px;
-                background: var(--hero-bg);
-                border: 1px solid var(--hero-border);
+                background: transparent;
+                border: none;
                 color: var(--hero-text);
                 margin-bottom: 1rem;
             }
             .hero h1 {
+                margin-bottom: 0.2rem;
+            }
+            .hero-content-row {
+                display: flex;
+                align-items: stretch;
+                gap: 0.8rem;
+            }
+            .hero-content-row .hero-logo {
+                height: 100%;
+                width: auto;
+                object-fit: contain;
+                flex-shrink: 0;
+            }
+            .hero-text-block {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            .hero-text-block h1 {
                 margin-bottom: 0.2rem;
             }
             .hero p, .hero .subtext {

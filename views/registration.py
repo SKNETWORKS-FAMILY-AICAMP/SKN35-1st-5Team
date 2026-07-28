@@ -48,7 +48,8 @@ def registration_status_view():
     total_items = len(registration_df)
     total_pages = max((total_items + page_size - 1) // page_size, 1)
 
-    c_page, c_info = st.columns([1, 4])
+    #c_page, c_info = st.columns([1, 4])
+    c_page, c_info, _ = st.columns([1, 3, 2], vertical_alignment="center")
     with c_page:
         page_number = st.number_input(
             "페이지 선택", 
@@ -57,7 +58,7 @@ def registration_status_view():
             value=1,
             step=1,
             key="reg_page_number",
-            label_visibility="hidden"
+            label_visibility="collapsed",
         )
     with c_info:
         st.markdown(f"<p class='page-info'>총 <b>{total_items:,}</b>건 중 {((page_number-1)*page_size)+1} ~ {min(page_number*page_size, total_items)}번째 항목 표출</p>", unsafe_allow_html=True)

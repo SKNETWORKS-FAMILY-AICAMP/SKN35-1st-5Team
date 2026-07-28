@@ -30,9 +30,10 @@ def faq_view():
         col1, col2 = st.columns([1, 1])
         with col1:
             # 구글 폼 문의 버튼 (링크는 실제 구글 폼 URL로 수정)
-            st.link_button("📄 구글 폼으로 문의하기", "https://forms.google.com", use_container_width=True)
+            st.link_button("📄 구글 폼으로 문의하기", "https://docs.google.com/forms/d/e/1FAIpQLSe9CH6gYXNJ9li8flYTyo_bOswCDLBF5Z4biSSILjvg_bEFuw/viewform?usp=publish-editor", use_container_width=True)
         with col2:
-            # 어디스카 공식 메일로 바로 연결
-            st.link_button("✉️ 이메일로 문의하기", "mailto:support@ATHISCar.com", use_container_width=True)
+             # Gmail 웹 작성 창으로 직접 연결 (받는 사람, 제목 자동 입력)
+             gmail_url = "https://mail.google.com/mail/?view=cm&fs=1&to=support@ATHISCar.com&su=[어디스카 문의]"
+             st.link_button("✉️ 이메일로 문의하기", gmail_url, use_container_width=True)
 
 faq_view_with_link = faq_view

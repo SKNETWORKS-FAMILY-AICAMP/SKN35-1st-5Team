@@ -20,15 +20,13 @@ def render_registration_metrics(registration_df):
 
     average_quota = total_registrations / unique_models if unique_models > 0 else 0
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric(label="총 등록 대수", value=f"{total_registrations:,} 대", delta="+12.4%")
+        st.metric(label="총 등록 대수", value=f"{total_registrations:,} 대",)
     with col2:
-        st.metric(label="신규 모델", value=f"{unique_models}", delta="안정적", delta_color="off")
+        st.metric(label="신규 모델", value=f"{unique_models}",)
     with col3:
-        st.metric(label="전기차 비중", value=f"{electric_share:.1f}%", delta="+5.2%")
-    with col4:
-        st.metric(label="평균 등록 수", value=f"{average_quota:,.0f} 대", delta="-2.1%")
+        st.metric(label="평균 등록 수", value=f"{average_quota:,.0f} 대",)
 
 def registration_status_view():
     # --- Data Loading ---

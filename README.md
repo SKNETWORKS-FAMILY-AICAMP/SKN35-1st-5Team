@@ -12,9 +12,9 @@ SKN35 1기 5조 (SKNETWORKS-FAMILY-AICAMP)
     <td align="center"><img src="image/p4.png" width="120"/></td>
   </tr>
   <tr>
-    <td align="center"><b>손채영</b><br/>DB 설계<br/>(모델별, 리뷰)데이터 연동<br/>모델별 랭킹 · 리뷰 Dialog<br/>프로젝트 폴더 정리<br/>UI/CSS 수정</td>
+    <td align="center"><b>손채영</b><br/>DB 설계<br/>모델별 랭킹 · 리뷰<br/>프로젝트 폴더 정리<br/>UI/CSS 수정</td>
     <td align="center"><b>차윤정</b><br/>DB설계<br/>PPT 작성<br/>FAQ 데이터 연동 및 관리</td>
-    <td align="center"><b>유지호</b><br/>DB설계<br/>웹 크롤링(엔카 사이트)<br/>DB 수정(리뷰)<br/>최종 ui  수정</td>
+    <td align="center"><b>유지호</b><br/>DB설계<br/>웹 크롤링(엔카 사이트)<br/>DB 수정(리뷰)<br/>최종 ui 수정</td>
     <td align="center"><b>김경민</b><br/>DB설계<br/>DB데이터 저장(차 등록 현황)<br/>UI 설정<br/>웹 크롤링(카이즈유)</td>
   </tr>
 </table>

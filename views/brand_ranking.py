@@ -24,21 +24,12 @@ def load_brand_ranking_data():
     if not df.empty:
         df["registration_count"] = pd.to_numeric(df["registration_count"], errors="coerce").fillna(0).astype(int)
         df["standard_ym_dt"] = pd.to_datetime(df["standard_ym"], format="%Y-%m")
-        df = df.sort_values(by=["brand_name", "standard_ym_dt"])     
+        df = df.sort_values(by=["brand_name", "standard_ym_dt"])    
         df["prev_count"] = df.groupby("brand_name")["registration_count"].shift(1)
         df["real_mom"] = (df["registration_count"] - df["prev_count"]).fillna(0).astype(int)
         df = df.sort_values(by=["standard_ym", "registration_count"], ascending=[False, False])
         df.drop(columns=["standard_ym_dt", "prev_count"], inplace=True)
 
-        def format_mom_display(val):
-            if val > 0:
-                return f"🟢 ▲ {val:,} 대"
-            elif val < 0:
-                return f"🔴 ▼ {abs(val):,} 대"
-            else:
-                return "➖ 0 대"
-
-        df["mom_display"] = df["real_mom"].apply(format_mom_display)
         df["logo"] = df["brand_name"].map(LOGO_URL_MAP).fillna(DEFAULT_LOGO)
         
     return df
@@ -84,7 +75,7 @@ def render_filter(df, show_type_filter=False, key_prefix="filter"):
 
 def brand_ranking_view():
     brand_ranking_df = load_brand_ranking_data()
-    section_title("브랜드별 랭킹", "월별 및 누적 브랜드 등록 순위 현황입니다. 행을 클릭하면 해당 브랜드의 상세 분석 창이 열립니다.")
+    section_title("브랜드별 랭킹", "월별 및 누적 브랜드 등록 순위 현황입니다. 항목을 클릭하면 해당 브랜드의 상세 분석 창이 열립니다.")
     
     target_df = brand_ranking_df
     
@@ -101,12 +92,11 @@ def brand_ranking_view():
 
     if target_ym == "ALL":
         display_df = (
-            filtered_df.groupby(["brand_name", "manufacturer_type", "logo"], as_index=False)
-            .agg({"registration_count": "sum"})
+            filtered_df.groupby(["brand_name", "logo"], as_index=False)
+            .agg({"registration_count": "sum", "real_mom": "sum"})
             .sort_values(by="registration_count", ascending=False)
         )
         display_df["standard_ym"] = "전체 기간"
-        display_df["mom_display"] = "➖ 0 대"
         
     elif target_ym and (target_ym.endswith("-") or target_ym.startswith("-")):
         if target_ym.endswith("-"):
@@ -119,12 +109,11 @@ def brand_ranking_view():
             period_label = f"전체 연도 {month_suffix}월"
 
         display_df = (
-            sub_df.groupby(["brand_name", "manufacturer_type", "logo"], as_index=False)
-            .agg({"registration_count": "sum"})
+            sub_df.groupby(["brand_name", "logo"], as_index=False)
+            .agg({"registration_count": "sum", "real_mom": "sum"})
             .sort_values(by="registration_count", ascending=False)
         )
         display_df["standard_ym"] = period_label
-        display_df["mom_display"] = "➖ 0 대"
         
     else:
         display_df = filtered_df[filtered_df["standard_ym"] == target_ym].copy()
@@ -136,37 +125,72 @@ def brand_ranking_view():
 
     display_df = display_df.reset_index(drop=True)
 
-    display_cols = ["logo", "brand_name", "registration_count", "mom_display", "standard_ym"]
-    existing_cols = [c for c in display_cols if c in display_df.columns]
+    # --- 페이징 처리 (10개씩) ---
+    page_size = 10
+    total_items = len(display_df)
+    total_pages = max((total_items + page_size - 1) // page_size, 1)
 
-    event = st.dataframe(
-        display_df[existing_cols],
-        use_container_width=True,
-        hide_index=True,
-        selection_mode="single-row",
-        on_select="rerun",
-        key="brand_rank_table",
-        column_config={
-            "logo": st.column_config.ImageColumn("로고", width="small"),
-            "brand_name": "브랜드명",
-            "registration_count": st.column_config.NumberColumn("등록대수 (합계)", format="%d 대"),
-            "mom_display": st.column_config.TextColumn("전월 대비 증감"),
-            "standard_ym": "조회 기간",
-        }
-    )
+    c_page, c_info = st.columns([3, 7])
+    with c_page:
+        page_number = st.number_input(
+            f"페이지 선택 (총 {total_pages} 페이지)", 
+            min_value=1, 
+            max_value=total_pages, 
+            value=1,
+            step=1,
+            key="brand_page_number"
+        )
+    with c_info:
+        st.markdown(f"<br><span style='color: #64748b; font-size: 0.9rem;'>총 <b>{total_items:,}</b>개 브랜드 중 {((page_number-1)*page_size)+1} ~ {min(page_number*page_size, total_items)}번째 항목 표출</span>", unsafe_allow_html=True)
 
-    selected_rows = event.selection.get("rows", [])
-    if selected_rows:
-        selected_idx = selected_rows[0]
-        selected_data = display_df.iloc[selected_idx]
-        brand_name = selected_data["brand_name"]
-        logo_url = selected_data.get("logo", "")
+    start_idx = (page_number - 1) * page_size
+    end_idx = start_idx + page_size
+    page_df = display_df.iloc[start_idx:end_idx].copy().reset_index(drop=True)
 
-        brand_history_df = brand_ranking_df[brand_ranking_df["brand_name"] == brand_name]
-        
-        # 새로운 팝업창 열기 전 세션 초기화
-        state_key_target = f"trend_target_{brand_name}"
-        if state_key_target not in st.session_state:
-            st.session_state[state_key_target] = "BRAND_TOTAL"
+    st.markdown("---")
 
-        show_brand_trend_dialog(brand_name, logo_url, brand_history_df)
+    # --- 커스텀 리스트 및 카드 형식 렌더링 ---
+    for idx, row in page_df.iterrows():
+        brand_name = row["brand_name"]
+        logo_url = row["logo"]
+        reg_count = row["registration_count"]
+        mom_val = row["real_mom"]
+        std_ym = row["standard_ym"]
+
+        # 증감 색상 및 아이콘 설정
+        if mom_val > 0:
+            mom_color = "#10b981"  # 녹색
+            mom_text = f"▲ {mom_val:,} 대"
+        elif mom_val < 0:
+            mom_color = "#ef4444"  # 빨강
+            mom_text = f"▼ {abs(mom_val):,} 대"
+        else:
+            mom_color = "#64748b"  # 회색
+            mom_text = "0 대"
+
+        # 컬럼 레이아웃 구성 (로고, 브랜드명, 등록대수, 전월대비, 기간, 상세버튼)
+        col_logo, col_name, col_count, col_mom, col_date, col_btn = st.columns([1, 2, 2, 2, 2, 1])
+
+        with col_logo:
+            if logo_url:
+                st.image(logo_url, width=40)
+        with col_name:
+            st.markdown(f"<div style='font-weight: 600; font-size: 1rem; padding-top: 8px;'>{brand_name}</div>", unsafe_allow_html=True)
+        with col_count:
+            st.markdown(f"<div style='font-size: 0.95rem; padding-top: 10px; color: #1e293b;'><b>{reg_count:,}</b> 대</div>", unsafe_allow_html=True)
+        with col_mom:
+            st.markdown(f"<div style='font-size: 0.95rem; padding-top: 10px; color: {mom_color}; font-weight: 600;'>{mom_text}</div>", unsafe_allow_html=True)
+        with col_date:
+            st.markdown(f"<div style='font-size: 0.9rem; padding-top: 10px; color: #64748b;'>{std_ym}</div>", unsafe_allow_html=True)
+        with col_btn:
+            if st.button("상세", key=f"btn_brand_{page_number}_{idx}"):
+                brand_history_df = brand_ranking_df[brand_ranking_df["brand_name"] == brand_name]
+                state_key_target = f"trend_target_{brand_name}"
+                if state_key_target not in st.session_state:
+                    st.session_state[state_key_target] = "BRAND_TOTAL"
+                show_brand_trend_dialog(brand_name, logo_url, brand_history_df)
+
+        st.divider()
+
+if __name__ == "__main__":
+    brand_ranking_view()

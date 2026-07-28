@@ -16,12 +16,36 @@ def apply_custom_styles() -> None:
             [data-testid="stSidebar"] * {
                 color: white !important;
             }
+            :root {
+              --hero-bg: linear-gradient(135deg, #eff6ff 0%, #ffffff 55%, #f8fafc 100%);
+              --hero-border: #dbeafe;
+              --hero-text: #0f172a;        /* 메인 글자색 */
+              --hero-subtext: #475569;     /* 설명글/보조 글자색 */
+            }
+            
+            /* 2. 다크 모드 변수 재정의 (시스템 설정에 따라 자동 전환) */
+            @media (prefers-color-scheme: dark) {
+              :root {
+                --hero-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 55%, #020617 100%);
+                --hero-border: #334155;    /* 톤다운된 어두운 테두리 */
+                --hero-text: #f8fafc;      /* 다크모드 메인 글자색 */
+                --hero-subtext: #94a3b8;   /* 다크모드 보조 글자색 */
+              }
+            }
+            
+            /* 3. .hero 클래스에 적용 */
             .hero {
                 padding: 1.2rem 1.3rem;
                 border-radius: 18px;
-                background: linear-gradient(135deg, #eff6ff 0%, #ffffff 55%, #f8fafc 100%);
-                border: 1px solid #dbeafe;
+                background: var(--hero-bg);
+                border: 1px solid var(--hero-border);
+                color: var(--hero-text);
                 margin-bottom: 1rem;
+            }
+            
+            /* 스타일 세부 가독성을 위한 내부 요소 예시 */
+            .hero p, .hero .subtext {
+                color: var(--hero-subtext);
             }
             .subtext {
                 font-size: 0.95rem;

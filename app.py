@@ -25,12 +25,17 @@ styles.apply_custom_styles()
 # ---------------------------------------------------------
 # 사이드바 메뉴 구성
 # ---------------------------------------------------------
+# ---------------------------------------------------------
+# 사이드바 메뉴 구성
+# ---------------------------------------------------------
 with st.sidebar:
-    # 1. 이미지만 단독으로 크게 배치 (width를 조절해 크기를 키우거나 줄일 수 있습니다)
-    # 중앙 정렬이 필요하다면 st.columns를 활용해 가운데에 넣을 수도 있습니다.
-    st.image(config.sidebar_logo, width=180)  # 예: 180px (필요에 따라 150~220 사이로 조절)
-    
-    st.caption(config.sidebar_caption)
+    # 빈 공간(col1), 이미지와 캡션(col2), 빈 공간(col3)으로 나누어 중앙 정렬
+    col1, col2, col3 = st.sidebar.columns([1, 3, 1])
+    with col2:
+        st.image(config.sidebar_logo, width=150)
+        # 캡션을 이미지 바로 아래(col2 안)에 넣으면 자동으로 함께 중앙 정렬됩니다.
+        st.caption(config.sidebar_caption)
+        
     st.divider()
 
     active_tab = option_menu(
@@ -43,6 +48,7 @@ with st.sidebar:
 
     st.divider()
     st.caption(config.footer_caption)
+
 # ---------------------------------------------------------
 # 라우팅 맵핑
 # ---------------------------------------------------------

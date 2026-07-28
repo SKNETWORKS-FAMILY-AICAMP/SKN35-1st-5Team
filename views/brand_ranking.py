@@ -184,13 +184,18 @@ def brand_ranking_view():
             st.markdown(f"<div style='font-size: 0.9rem; padding-top: 10px; color: #64748b;'>{std_ym}</div>", unsafe_allow_html=True)
         with col_btn:
             if st.button("상세", key=f"btn_brand_{page_number}_{idx}"):
-                brand_history_df = brand_ranking_df[brand_ranking_df["brand_name"] == brand_name]
-                state_key_target = f"trend_target_{brand_name}"
-                if state_key_target not in st.session_state:
-                    st.session_state[state_key_target] = "BRAND_TOTAL"
-                show_brand_trend_dialog(brand_name, logo_url, brand_history_df)
+                st.session_state["open_brand_dialog"] = brand_name
+                st.session_state["open_brand_dialog_logo"] = logo_url
+                st.rerun()
 
         st.divider()
+
+    open_brand = st.session_state.get("open_brand_dialog")
+    if open_brand:
+        open_logo = st.session_state.get("open_brand_dialog_logo")
+        brand_history_df = brand_ranking_df[brand_ranking_df["brand_name"] == open_brand]
+        show_brand_trend_dialog(open_brand, open_logo, brand_history_df)
+
 
 if __name__ == "__main__":
     brand_ranking_view()

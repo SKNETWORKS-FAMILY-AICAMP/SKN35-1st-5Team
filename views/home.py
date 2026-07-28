@@ -1,3 +1,6 @@
+import base64
+from pathlib import Path
+
 import streamlit as st
 import pandas as pd
 import random
@@ -6,12 +9,30 @@ from dialogs import show_review_dialog
 from data_loader import load_registration_data, load_model_ranking_data, load_review_data, load_faq_data
 from constants import LOGO_URL_MAP, DEFAULT_CAR_IMAGE
 
-def section_title(title, caption):
+ATHISCAR_LOGO_PATH = Path(__file__).resolve().parent.parent / "image" / "athiscar.png"
+
+
+@st.cache_data
+def _load_logo_base64(path: Path) -> str:
+    return base64.b64encode(path.read_bytes()).decode("utf-8")
+
+
+def section_title(title, caption, logo_path: Path | None = None):
+    logo_html = ""
+    if logo_path and logo_path.exists():
+        logo_b64 = _load_logo_base64(logo_path)
+        logo_html = f'<img src="data:image/png;base64,{logo_b64}" class="hero-logo" alt="로고"/>'
+
     st.markdown(
         f"""
         <div class="hero">
-            <h1>{title}</h1>
-            <div class="subtext">{caption}</div>
+            <div class="hero-content-row">
+                {logo_html}
+                <div class="hero-text-block">
+                    <h1>{title}</h1>
+                    <div class="subtext">{caption}</div>
+                </div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -35,6 +56,7 @@ def home_view():
     section_title(
         "전국 자동차 등록 현황 대시보드 (Home)",
         "주요 통계 요약 및 월별 등록 추이, 차량 리뷰 검색 기능을 제공합니다.",
+        logo_path=ATHISCAR_LOGO_PATH,
     )
 
     total_count = (

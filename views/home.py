@@ -12,7 +12,7 @@ def section_title(title, caption):
     st.markdown(
         f"""
         <div class="hero">
-            <h1 style="margin-bottom:0.2rem;">{title}</h1>
+            <h1>{title}</h1>
             <div class="subtext">{caption}</div>
         </div>
         """,

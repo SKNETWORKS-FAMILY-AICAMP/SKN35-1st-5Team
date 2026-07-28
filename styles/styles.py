@@ -141,7 +141,7 @@ def apply_custom_styles() -> None:
 
 # 사이드바 옵션 메뉴 스타일 딕셔너리 분리
 SIDEBAR_MENU_STYLES = {
-    "container": {"padding": "0!important", "background-color": "#4E6C87 !important"},
+    "container": {"padding": "0!important", "background-color": "#4E6C87 !important","border-radius":"0"},
     "icon": {"color": "#e2e8f0", "font-size": "15px"},
     "nav-link": {
         "font-size": "14px",

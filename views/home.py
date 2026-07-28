@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import random
-import time
-from sqlalchemy import text
 from db import get_engine
 from dialogs import show_review_dialog
 from data_loader import load_registration_data, load_model_ranking_data, load_review_data, load_faq_data
@@ -18,6 +16,15 @@ def section_title(title, caption):
         """,
         unsafe_allow_html=True,
     )
+
+@st.fragment(run_every=2)
+def rotating_logos():
+    shuffled_logos = list(LOGO_URL_MAP.items())
+    random.shuffle(shuffled_logos)
+    cols = st.columns(len(shuffled_logos))
+    for idx, (brand, url) in enumerate(shuffled_logos):
+        with cols[idx % len(cols)]:
+            st.image(url, width=45)
 
 def home_view():
     registration_df = load_registration_data()
@@ -51,13 +58,8 @@ def home_view():
 
     st.divider()
 
-    st.markdown("### 🏆 주요 제조사 로고")
-    shuffled_logos = list(LOGO_URL_MAP.items())
-    random.shuffle(shuffled_logos)
-    cols = st.columns(len(shuffled_logos))
-    for idx, (brand, url) in enumerate(shuffled_logos):
-        with cols[idx % len(cols)]:
-            st.image(url, width=45)
+    st.markdown("### 주요 제조사 로고")
+    rotating_logos()
 
     st.divider()
 
@@ -139,7 +141,3 @@ def home_view():
                         matched_reviews = review_df[review_df["model_id"] == model_id]
 
                         show_review_dialog(car_name, logo_url, car_image_url, matched_reviews)
-
-    if not review_keyword.strip():
-        time.sleep(2)
-        st.rerun()

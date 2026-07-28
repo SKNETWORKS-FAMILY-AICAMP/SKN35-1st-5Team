@@ -141,7 +141,7 @@ def brand_ranking_view():
             key="brand_page_number"
         )
     with c_info:
-        st.markdown(f"<br><span style='color: #64748b; font-size: 0.9rem;'>총 <b>{total_items:,}</b>개 브랜드 중 {((page_number-1)*page_size)+1} ~ {min(page_number*page_size, total_items)}번째 항목 표출</span>", unsafe_allow_html=True)
+        st.markdown(f"<br><span class='page-info'>총 <b>{total_items:,}</b>개 브랜드 중 {((page_number-1)*page_size)+1} ~ {min(page_number*page_size, total_items)}번째 항목 표출</span>", unsafe_allow_html=True)
 
     start_idx = (page_number - 1) * page_size
     end_idx = start_idx + page_size
@@ -157,15 +157,15 @@ def brand_ranking_view():
         mom_val = row["real_mom"]
         std_ym = row["standard_ym"]
 
-        # 증감 색상 및 아이콘 설정
+        # 증감 방향에 따른 모디파이어 클래스 및 텍스트 설정
         if mom_val > 0:
-            mom_color = "#10b981"  # 녹색
+            mom_class = "brand-mom-up"
             mom_text = f"▲ {mom_val:,} 대"
         elif mom_val < 0:
-            mom_color = "#ef4444"  # 빨강
+            mom_class = "brand-mom-down"
             mom_text = f"▼ {abs(mom_val):,} 대"
         else:
-            mom_color = "#64748b"  # 회색
+            mom_class = "brand-mom-flat"
             mom_text = "0 대"
 
         # 컬럼 레이아웃 구성 (로고, 브랜드명, 등록대수, 전월대비, 기간, 상세버튼)
@@ -175,13 +175,13 @@ def brand_ranking_view():
             if logo_url:
                 st.image(logo_url, width=40)
         with col_name:
-            st.markdown(f"<div style='font-weight: 600; font-size: 1rem; padding-top: 8px;'>{brand_name}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='brand-name'>{brand_name}</div>", unsafe_allow_html=True)
         with col_count:
-            st.markdown(f"<div style='font-size: 0.95rem; padding-top: 10px; color: #1e293b;'><b>{reg_count:,}</b> 대</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='brand-count'><b>{reg_count:,}</b> 대</div>", unsafe_allow_html=True)
         with col_mom:
-            st.markdown(f"<div style='font-size: 0.95rem; padding-top: 10px; color: {mom_color}; font-weight: 600;'>{mom_text}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='brand-mom {mom_class}'>{mom_text}</div>", unsafe_allow_html=True)
         with col_date:
-            st.markdown(f"<div style='font-size: 0.9rem; padding-top: 10px; color: #64748b;'>{std_ym}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='brand-date'>{std_ym}</div>", unsafe_allow_html=True)
         with col_btn:
             if st.button("상세", key=f"btn_brand_{page_number}_{idx}"):
                 brand_history_df = brand_ranking_df[brand_ranking_df["brand_name"] == brand_name]

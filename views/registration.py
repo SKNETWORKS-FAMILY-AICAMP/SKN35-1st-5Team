@@ -5,33 +5,8 @@ from data_loader import load_registration_data
 from dialogs import show_registration_trend_dialog
 from constants import LOGO_URL_MAP
 
-# --- CSS Styles for custom layout ---
-st.markdown("""
-    <style>
-        /* Style for summary metrics */
-        .stMetric {
-            background-color: #f8fafc;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #e2e8f0;
-        }
-        
-        /* Adjust overall top margin */
-        .main > div {
-            padding-top: 2rem;
-        }
+# 이 파일의 CSS(.stMetric, .page-info)는 styles/styles.py의 apply_custom_styles()로 이동했습니다.
 
-        /* Style for the page info text */
-        .page-info {
-            color: #64748b;
-            font-size: 0.9rem;
-            font-weight: 500;
-            text-align: right;
-            align-self: center;
-            margin-top: 5px;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 def render_registration_metrics(registration_df):
     """상단 요약 지표 카드 출력"""

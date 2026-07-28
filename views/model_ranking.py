@@ -116,7 +116,7 @@ def model_ranking_view():
             st.rerun()
     with col_p2:
         st.markdown(
-            f"<div style='text-align: center; font-weight: bold; padding-top: 6px;'>페이지 {st.session_state.model_rank_page} / {total_pages} (총 {total_items}개 모델)</div>",
+            f"<div class='model-page-indicator'>페이지 {st.session_state.model_rank_page} / {total_pages} (총 {total_items}개 모델)</div>",
             unsafe_allow_html=True
         )
     with col_p3:
@@ -144,25 +144,25 @@ def model_ranking_view():
         with st.container():
             # 카드 배경 대신 항목들 사이에 은은한 구분선 추가 (첫 번째 항목 위에는 생략 가능)
             if idx > 0:
-                st.markdown("<hr style='margin: 15px 0; border: none; border-top: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-            
+                st.markdown("<hr class='model-row-divider'>", unsafe_allow_html=True)
+
             # 레이아웃: [순위(1)] [로고/브랜드(2)] [차량사진(3)] [차량이름 및 대수(4)] [리뷰 버튼(2)]
             col_rank, col_brand, col_img, col_info, col_action = st.columns([1, 2, 3, 3, 2])
 
             with col_rank:
-                st.markdown(f"<h3 style='margin: 0; color: #2563eb;'>{global_rank}위</h3>", unsafe_allow_html=True)
+                st.markdown(f"<h3 class='model-rank-number'>{global_rank}위</h3>", unsafe_allow_html=True)
 
             with col_brand:
                 if logo_url:
                     st.image(logo_url, width=45)
-                st.markdown(f"<b style='font-size: 0.95rem; color: #4b5563;'>{brand_name}</b>", unsafe_allow_html=True)
+                st.markdown(f"<b class='model-brand-name'>{brand_name}</b>", unsafe_allow_html=True)
 
             with col_img:
                 if car_image_url:
                     st.image(car_image_url, width=130)
 
             with col_info:
-                st.markdown(f"<h4 style='margin: 5px 0 0 0;'>{car_name}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 class='model-car-name'>{car_name}</h4>", unsafe_allow_html=True)
                 st.caption(f"등록 대수: {reg_count:,} 대")
 
             with col_action:
@@ -179,7 +179,7 @@ def model_ranking_view():
             st.session_state.model_rank_page -= 1
             st.rerun()
     with c_b2:
-        st.markdown(f"<div style='text-align: center; color: #6b7280;'>{st.session_state.model_rank_page} / {total_pages} 페이지</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='model-page-indicator-sub'>{st.session_state.model_rank_page} / {total_pages} 페이지</div>", unsafe_allow_html=True)
     with c_b3:
         if st.button("다음 페이지 ▶", use_container_width=True, key="bottom_next", disabled=(st.session_state.model_rank_page >= total_pages)):
             st.session_state.model_rank_page += 1

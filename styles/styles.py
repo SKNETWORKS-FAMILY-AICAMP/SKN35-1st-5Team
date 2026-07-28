@@ -19,7 +19,8 @@ def apply_custom_styles() -> None:
                 padding-bottom: 2rem;
             }
             [data-testid="stSidebar"] {
-                background: linear-gradient(180deg, #0ea5e9 0%, #38bdf8 100%);
+                # background: linear-gradient(180deg, #4E6C87 0%, #38bdf8 100%);
+                background: #4E6C87;
             }
             [data-testid="stSidebar"] * {
                 color: white !important;
@@ -140,7 +141,7 @@ def apply_custom_styles() -> None:
 
 # 사이드바 옵션 메뉴 스타일 딕셔너리 분리
 SIDEBAR_MENU_STYLES = {
-    "container": {"padding": "0!important", "background-color": "#0f172a","border-radius":"0"},
+    "container": {"padding": "0!important", "background-color": "#4E6C87 !important"},
     "icon": {"color": "#e2e8f0", "font-size": "15px"},
     "nav-link": {
         "font-size": "14px",
@@ -151,7 +152,7 @@ SIDEBAR_MENU_STYLES = {
         "--hover-color": "rgba(59, 130, 246, 0.3)",
     },
     "nav-link-selected": {
-        "background-color": "#3b82f6",
-        "color": "#ffffff",
+        "background-color": "#135471",
+        "color": "#fff",
     },
 }
